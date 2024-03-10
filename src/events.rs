@@ -1,7 +1,7 @@
 use poise::serenity_prelude::*;
-use crate::{err, info, info_sync, Res, sql};
+use crate::{err, file, info, info_sync, sql, Res};
 use crate::core::{file_mtime, InteractionID, report_user_error};
-use crate::server_data::{AMBIGRAM_SUBMISSION_CHANNEL_ID, GLYPH_SUBMISSION_CHANNEL_ID, SUBMIT_EMOJI_ID};
+use crate::server_data::{AMBIGRAM_SUBMISSION_CHANNEL_ID, BOT_USER_ID, DISCORD_BOT_TOKEN, GLYPH_SUBMISSION_CHANNEL_ID, SUBMIT_EMOJI_ID};
 use crate::sql::Challenge;
 
 pub struct GlyfiEvents;
@@ -25,7 +25,7 @@ macro_rules! run {
             report_user_error(
                 $ctx,
                 $user,
-                &format!("Sorry, an internal error occurred: {}: {}", $msg, e)
+                &format!("Sorry, an internal error occurred: {}: {}\nPlease contact @sungodmoth to file a bug report.", $msg, e)
             ).await;
             return;
         }
@@ -166,16 +166,19 @@ impl EventHandler for GlyfiEvents {
             report_user_error(&ctx, user, "Submissions must contain only images").await;
             remove_reaction!(ctx, r);
         }
-
-        // Add the submission.
+        
+        info!("Adding submission {} from {} for challenge {:?}", message.id, user, challenge);
+        // Add the submiss
+        file::download_submission(att, message.id, challenge);
+        
         run!(
             ctx, user,
-            sql::add_submission(message.id, challenge, user, &att.url).await,
+            async {sql::register_submission(message.id, challenge, user, &att.url).await?;
+                file::download_submission(att, message.id, challenge).await }.await,
             "Error adding submission"
         );
 
         // Done.
-        info!("Added submission {} from {} for challenge {:?}", message.id, user, challenge);
         if let Err(e) = message.react(ctx, confirm_reaction()).await {
             err!("Error reacting to submission: {}", e);
         }
@@ -191,15 +194,23 @@ impl EventHandler for GlyfiEvents {
         // is ever some amount of downtime on our part?) then ignore it.
         if user != message.author.id { return; };
 
+        // If the reaction was removed by ourselves, ignore it. Else we
+        // end up trying to remove entries from the db that don't exist
+        // every time we remove a message for being in the wrong channel.
+        // Which is harmless, but not intended.
+        if BOT_USER_ID == message.author.id { return; };
+        
+        info!("Removing submission {} from {} for challenge {:?}", message.id, user, challenge);
+
         // Remove the submission.
         run!(
             ctx, user,
-            sql::remove_submission(message.id, challenge).await,
+            async {sql::deregister_submission(message.id, challenge).await?;
+                file::delete_submission(message.id, challenge).await }.await,
             "Error removing submission"
         );
 
         // Done.
-        info!("Removed submission {} from {} for challenge {:?}", message.id, user, challenge);
 
         // Remove our confirmation reaction. This is allowed to fail in case
         // it was already removed somehow.

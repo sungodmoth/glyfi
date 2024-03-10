@@ -5,6 +5,7 @@ mod core;
 mod commands;
 mod sql;
 mod events;
+mod file;
 
 use std::sync::Arc;
 use poise::serenity_prelude as ser;

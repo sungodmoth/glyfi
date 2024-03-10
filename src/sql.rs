@@ -20,13 +20,19 @@ impl Challenge {
         self as _
     }
 
+    pub fn short_name(self) -> String {
+        match self {
+            Challenge::Glyph => "glyph".to_owned(),
+            Challenge::Ambigram => "ambi".to_owned(),
+        }
+    }
     pub fn announcement_image_path(self) -> String {
         let name = match self {
             Challenge::Glyph => "glyph_announcement",
             Challenge::Ambigram => "ambigram_announcement",
         };
 
-        return format!("./weekly_challenges/{}.png", name);
+        return format!("./generation/{}.png", name);
     }
 }
 
@@ -239,25 +245,25 @@ pub async unsafe fn __glyfi_init_db() {
             challenge INTEGER NOT NULL,
             prompt TEXT NOT NULL
         ) STRICT;
-    "#).execute(pool()).await.unwrap();
-}
-
-/// Add a submission.
-pub async fn add_submission(
-    message: MessageId,
-    challenge: Challenge,
-    author: UserId,
-    link: &str,
-) -> Res {
+        "#).execute(pool()).await.unwrap();
+    }
+    
+    /// Add a submission to the database.
+    pub async fn register_submission(
+        message: MessageId,
+        challenge: Challenge,
+        author: UserId,
+        link: &str,
+    ) -> Res {
     sqlx::query(r#"
-        INSERT INTO submissions (
-            message,
-            week,
-            challenge,
+    INSERT INTO submissions (
+        message,
+        week,
+        challenge,
             author,
             link
         ) VALUES (?, ?, ?, ?, ?);
-    "#)
+        "#)
         .bind(message.get() as i64)
         .bind(current_week().await?)
         .bind(challenge as i64)
@@ -267,18 +273,34 @@ pub async fn add_submission(
         .await
         .map(|_| ())
         .map_err(|e| e.into())
-}
+    }
+    /// Remove a submission from the database.
+    pub async fn deregister_submission(message: MessageId, challenge: Challenge) -> Res {
+        sqlx::query(r#"
+            DELETE FROM submissions
+            WHERE message = ?
+            AND week = ?
+            AND challenge = ?;
+        "#)
+            .bind(message.get() as i64)
+            .bind(current_week().await?)
+            .bind(challenge as i64)
+            .execute(pool())
+            .await
+            .map(|_| ())
+            .map_err(|e| e.into())
+    }
 
-/// Get the current week.
-pub async fn current_week() -> Result<i64, Error> {
-    sqlx::query_scalar("SELECT week FROM current_week LIMIT 1;")
+    /// Get the current week.
+    pub async fn current_week() -> Result<i64, Error> {
+        sqlx::query_scalar("SELECT week FROM current_week LIMIT 1;")
         .fetch_one(pool())
         .await
         .map_err(|e| format!("Failed to get current week: {}", e).into())
-}
-
-/// Get profile data for a user.
-pub async fn get_user_profile(user: UserId) -> Result<UserProfileData, Error> {
+    }
+    
+    /// Get profile data for a user.
+    pub async fn get_user_profile(user: UserId) -> Result<UserProfileData, Error> {
     #[derive(Default, FromRow)]
     pub struct UserProfileDataFirst {
         pub nickname: Option<String>,
@@ -346,22 +368,6 @@ pub async fn get_user_profile(user: UserId) -> Result<UserProfileData, Error> {
     })
 }
 
-/// Remove a submission for the current week.
-pub async fn remove_submission(message: MessageId, challenge: Challenge) -> Res {
-    sqlx::query(r#"
-        DELETE FROM submissions
-        WHERE message = ?
-        AND week = ?
-        AND challenge = ?;
-    "#)
-        .bind(message.get() as i64)
-        .bind(current_week().await?)
-        .bind(challenge as i64)
-        .execute(pool())
-        .await
-        .map(|_| ())
-        .map_err(|e| e.into())
-}
 
 /// Set a user’s nickname.
 pub async fn set_nickname(user: UserId, name: &str) -> Res {

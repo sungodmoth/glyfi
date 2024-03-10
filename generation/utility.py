@@ -1,6 +1,5 @@
 import json
 import subprocess
-import glob
 
 def latex_escape(string):
     ## Escapes strings so that they can be used in LaTeX. Currently only escapes _,
@@ -75,15 +74,6 @@ def parse_fontdata():
     ## Parses font information from fontdata.json.
     with open("fontdata.json", "r") as f:
         return json.loads(f.read())["fonts"]
-
-def number_of_submissions(prefix):
-    ## Determines how many submissions there are by looking for files with the prefix and a number.
-    i = 1
-    while True:
-        if glob.glob(f"Images/{prefix}_{i}.*"):
-            i += 1
-        else:
-            return i - 1
 
 def match_font(string, fonts):
     ## Given a string and a list of fonts, in the format parsed from

@@ -94,7 +94,7 @@ advdate
     width=#2cm,
     height=#3cm,
     keepaspectratio] {
-                    Images/Ambi_#1
+                    \getimage{#1}
                 }
 	}
 }
@@ -103,10 +103,14 @@ advdate
     width=#2cm,
     height=#3cm,
     keepaspectratio] {
-                    Images/Glyph_#1
+                    \getimage{#1}
                 }
 	}
 }
+
+\newcommand\setimage[2]{\expandafter\def\csname Image#1\endcsname{#2}}
+\newcommand\getimage[1]{\csname Image#1\endcsname}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

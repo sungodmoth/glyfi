@@ -12,12 +12,12 @@ async fn generate_challenge_image(challenge: Challenge, prompt: &str) -> Result<
     };
 
     // Command for generating the image.
-    let mut command = tokio::process::Command::new("./weekly_challenges.py");
+    let mut command = tokio::process::Command::new("./generate.py");
     command.arg(name);
     command.arg(&prompt);
     command.kill_on_drop(true);
-    command.current_dir("./weekly_challenges");
-    info!("Running Shell Command {:?}", command);
+    command.current_dir("./generation");
+    info!("Running shell command {:?}", command);
 
     // Run it.
     let res = command.spawn()?.wait().await?;

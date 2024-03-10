@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import subprocess
-import sys
+import sys, os
 import argparse
 import datetime
 import time
@@ -146,26 +146,40 @@ fr"""
 """)
         ####################GLYPH_POLL########################
         if args.subcommand == "glyph_poll":
-            numsubs = number_of_submissions("Glyph")
+            subs = os.listdir("images/thisweek/glyph")
+            buf = ""
+            i = 1
+            for sub in subs:
+                buf += fr"""\setimage{{{i}}}{{{"images/thisweek/glyph/" + sub.split(".")[0]}}}
+"""
+                i += 1
             f.writelines(
 fr"""
 \def\ThisWeekGlyph{{{match_and_format_font(args.glyph, fonts, args.font, args.size, 60, args.verbose)}}}
 \begin{{document}}
-\def\NumberOfSubs{{{numsubs}}}
+\def\NumberOfSubs{{{len(subs)}}}
+{buf}
 \glyphlabels
-\GlyphChallengeShowcase{{9}}{{{args.cols or determine_columns(numsubs,3)}}}
+\GlyphChallengeShowcase{{9}}{{{args.cols or determine_columns(len(subs),3)}}}
 \end{{document}}
 """)
         ####################AMBIGRAM_POLL#####################
         if args.subcommand == "ambigram_poll":
-            numsubs = number_of_submissions("Ambi")
+            subs = os.listdir("images/thisweek/ambi")
+            buf = ""
+            i = 1
+            for sub in subs:
+                buf += fr"""\setimage{{{i}}}{{{"images/thisweek/ambi/" + sub.split(".")[0]}}}
+"""
+                i += 1
             f.writelines(
 fr"""
 \def\ThisWeekAmbigram{{{match_and_format_font(args.ambi, fonts, args.font, args.size, args.verbose, 22)}}}
 \begin{{document}}
-\def\NumberOfAmbis{{{numsubs}}}
+\def\NumberOfAmbis{{{len(subs)}}}
+{buf}
 \glyphlabels
-\AmbigramChallengeShowcase{{11}}{{{args.cols or determine_columns(numsubs,3)}}}
+\AmbigramChallengeShowcase{{11}}{{{args.cols or determine_columns(len(subs),3)}}}
 \end{{document}}
 """)
         ####################GLYPH_WINNERS########################

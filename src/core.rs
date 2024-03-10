@@ -145,7 +145,7 @@ pub async fn log_command(ctx: Context<'_>) {
 
 /// Report an error resulting from a user misusing a command/function.
 pub async fn report_user_error(ctx: impl CacheHttp, user: UserId, s: &str) {
-    info!("User Error ({}): {}", user, s);
+    info!("User error ({}): {}", user, s);
 
     // Helper for error handling.
     async fn aux(ctx: &impl CacheHttp, user: UserId, s: &str) -> Res {
