@@ -1,13 +1,6 @@
-# generation.py
+# generate.py
 
-Generates challenge-related images for the Glyphs and Alphabets discord server. Assumes a Linux environment, and invokes `pdftoppm`, `convert` (part of `imagemagick`), `lualatex` and `fc-match` (for local font information). 
-
-All images should be stored in a folder named `Images`. For quick testing, copy `sample_images` to `Images`. The usage examples below use the sample images. The format of this directory is as follows:
-
-* Glyph submissions should have the filenames `Glyph_1`, `Glyph_2`, etc (with any image file extension).
-* Ambigram submissions are likewise `Ambi_1`, `Ambi_2`, etc.
-* User profile pictures should have filenames matching the user's names and should be stored in a subdirectory `Images/pfp`. Note that LaTeX doesn't like the characters `&%$#{}~^\` in filenames, so for now these should simply be stripped from stored usernames.
-* The winning submissions should be copied to files named `GlyphWinnerFirst`, `GlyphWinnerSecond`, `GlyphWinnerThird` for the glyph challenge, and likewise `AmbiWinnerFirst`, `AmbiWinnerSecond`, `AmbiWinnerThird` for the ambigram challenge (with the appropriate file extensions).
+Submission images are stored under the `images` folder, which has subdirectories for `lastweek` and `thisweek`, each of which is divided into `glyph` and `ambi`. A submission's file will be saved under `<message_id>.png`, with conversion to `.png` being performed for simplicity's sake, and to avoid formats like `.webp` which don't play nicely with LaTeX.
 
 For the full list of available options, consult ```weekly_challenges.py -h``` which will give a list of subcommands and a brief description of their usage, and ```weekly_challenges.py <SUBCOMMAND> -h``` for detailed description of one particular subcommand.
 

@@ -196,7 +196,7 @@ impl EventHandler for GlyfiEvents {
 
         // If the reaction was removed by ourselves, ignore it. Else we
         // end up trying to remove entries from the db that don't exist
-        // every time we remove a message for being in the wrong channel.
+        // every time we remove a reaction for being in the wrong channel.
         // Which is harmless, but not intended.
         if BOT_USER_ID == message.author.id { return; };
         
