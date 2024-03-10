@@ -1,4 +1,4 @@
-#glyfi - a bot for the Glyphs and Alphabets Discord server
+# glyfi - a bot for the Glyphs and Alphabets Discord server
 
 Much of the code in this repo (see initial commit) was authored by @Sirraide, so big thanks to them!
 The LaTeX code was co-written with one `doggo` on Discord.
