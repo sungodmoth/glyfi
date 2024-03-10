@@ -1,0 +1,17 @@
+weekly_challenges copy.log
+weekly_challenges copy.tex
+weekly_challenges_base.log
+weekly_challenges_base.pdf
+weekly_challenges.aux
+weekly_challenges.log
+weekly_challenges.pdf
+weekly_challenges.tex
+*.png
+*.jpg
+*.jpeg
+*.pyc
+*.synctex.gz
+*.code-workspace
+*.txt
+*.temp
+!/sample_images/**

@@ -1,0 +1,658 @@
+% !TEX program = xelatex
+\documentclass[tikz]{standalone}
+\usepackage[english]{isodate}
+\usepackage{
+fontspec,
+% xeCJK,
+xparse,
+advdate
+}
+% \usepackage[normalem]{ulem}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \setCJKmainfont{Noto Serif CJK JP}
+% \setCJKmonofont{Noto Sans CJK JP}
+
+ \setmainfont{STIXTwoText}[ %
+     Extension = {.otf}, %
+     UprightFont = {*-Regular}, %
+     ItalicFont = {*-Italic}, %
+     BoldFont = {*-Bold}, %
+     BoldItalicFont = {*-BoldItalic} %
+ ]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\def\glyphlabels{
+    \setglyphlabel{1}{A}
+    \setglyphlabel{2}{B}
+    \setglyphlabel{3}{C}
+    \setglyphlabel{4}{D}
+    \setglyphlabel{5}{E}
+    \setglyphlabel{6}{F}
+    \setglyphlabel{7}{G}
+    \setglyphlabel{8}{H}
+    \setglyphlabel{9}{I}
+    \setglyphlabel{10}{J}
+    \setglyphlabel{11}{K}
+    \setglyphlabel{12}{L}
+    \setglyphlabel{13}{M}
+    \setglyphlabel{14}{N}
+    \setglyphlabel{15}{O}
+    \setglyphlabel{16}{P}
+    \setglyphlabel{17}{Q}
+    \setglyphlabel{18}{R}
+    \setglyphlabel{19}{S}
+    \setglyphlabel{20}{T}
+    \setglyphlabel{21}{U}
+    \setglyphlabel{22}{V}
+    \setglyphlabel{23}{W}
+    \setglyphlabel{24}{X}
+    \setglyphlabel{25}{Y}
+    \setglyphlabel{26}{Z}
+    \setglyphlabel{27}{Æ}
+    \setglyphlabel{28}{Þ}
+    \setglyphlabel{29}{ẞ}
+    \setglyphlabel{30}{Ø}
+    \setglyphlabel{31}{Ð}
+    \setglyphlabel{32}{Ŋ}
+    \setglyphlabel{33}{Ĳ}
+    \setglyphlabel{34}{Ł}
+    \setglyphlabel{35}{Γ}
+    \setglyphlabel{36}{Δ}
+    \setglyphlabel{37}{Θ}
+    \setglyphlabel{38}{Λ}
+    \setglyphlabel{39}{Ξ}
+    \setglyphlabel{40}{Π}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\GALogo}[3]{%
+  \resizebox{#1}{!}{%
+    \begin{tikzpicture}%
+        \path[fill=#2] (4.19998, 4.19998) circle (3.75000cm);%
+        \path[fill=#3] (5.81278, 8.01788) .. controls (5.31708, 8.22758) and (4.77208, 8.34348) .. (4.19998, 8.34348) .. controls (2.48368, 8.34348) and (1.01108, 7.29998) .. (.38218, 5.81278) .. controls (.17248, 5.31718) and (.05648, 4.77208) .. (.05648, 4.19998) .. controls (.05648, 1.91168) and (1.91158, .05648) .. (4.19998, .05648) .. controls (5.91628, .05648) and (7.38888, 1.10008) .. (8.01788, 2.58718) .. controls (8.22758, 3.08288) and (8.34348, 3.62788) .. (8.34348, 4.19998) .. controls (8.34348, 5.91628) and (7.29998, 7.38888) .. (5.81278, 8.01788) -- cycle (5.46698, 6.76048) .. controls (5.43468, 6.78468) and (5.38618, 6.79678) .. (5.32148, 6.79678) .. controls (5.20028, 6.79678) and (5.09618, 6.76548) .. (5.00928, 6.70278) .. controls (4.88598, 6.61598) and (4.78288, 6.49268) .. (4.70018, 6.33308) .. controls (4.64548, 6.22998) and (4.56668, 5.99058) .. (4.46368, 5.61458) -- (4.41818, 5.45398) -- (5.19718, 5.45398) .. controls (5.47608, 5.45398) and (5.71248, 5.48228) .. (5.90658, 5.53888) -- (6.05808, 5.53888) -- (5.52158, 3.66248) .. controls (5.43258, 3.35338) and (5.38818, 3.17748) .. (5.38818, 3.13508) .. controls (5.38818, 3.10878) and (5.39628, 3.08658) .. (5.41238, 3.06838) .. controls (5.42858, 3.05018) and (5.44678, 3.04108) .. (5.46698, 3.04108) .. controls (5.50338, 3.04108) and (5.53978, 3.05628) .. (5.57618, 3.08658) .. controls (5.66908, 3.16338) and (5.77918, 3.29968) .. (5.90658, 3.49578) -- (6.00658, 3.43818) .. controls (5.82068, 3.12698) and (5.63568, 2.90668) .. (5.45188, 2.77738) .. controls (5.32658, 2.68848) and (5.18408, 2.64398) .. (5.02448, 2.64398) .. controls (4.89708, 2.64398) and (4.79708, 2.67838) .. (4.72438, 2.74708) .. controls (4.65168, 2.81578) and (4.61528, 2.90358) .. (4.61528, 3.01078) .. controls (4.61528, 3.09568) and (4.64148, 3.22698) .. (4.69408, 3.40488) -- (5.19718, 5.09628) -- (4.33638, 5.09628) -- (3.99078, 3.74738) .. controls (3.81698, 3.06638) and (3.65478, 2.58338) .. (3.50428, 2.29848) .. controls (3.35367, 2.01348) and (3.17038, 1.79068) .. (2.95407, 1.63008) .. controls (2.73787, 1.46938) and (2.49837, 1.38898) .. (2.23567, 1.38898) .. controls (2.05177, 1.38898) and (1.91887, 1.42138) .. (1.83707, 1.48608) .. controls (1.75527, 1.55078) and (1.71427, 1.62848) .. (1.71427, 1.71938) .. controls (1.71427, 1.80238) and (1.74717, 1.87408) .. (1.81277, 1.93468) .. controls (1.87847, 1.99528) and (1.96387, 2.02558) .. (2.06897, 2.02558) .. controls (2.15997, 2.02558) and (2.23117, 2.00188) .. (2.28267, 1.95438) .. controls (2.33417, 1.90698) and (2.35997, 1.84778) .. (2.35997, 1.77708) .. controls (2.35997, 1.71648) and (2.34077, 1.66388) .. (2.30237, 1.61948) -- (2.27207, 1.57698) .. controls (2.27207, 1.56688) and (2.27607, 1.55878) .. (2.28417, 1.55278) .. controls (2.30237, 1.54068) and (2.32457, 1.53458) .. (2.35087, 1.53458) .. controls (2.43567, 1.53458) and (2.52867, 1.61338) .. (2.62977, 1.77098) .. controls (2.69237, 1.86598) and (2.78637, 2.15698) .. (2.91167, 2.64398) -- (3.54517, 5.09628) -- (3.12387, 5.09628) -- (3.21787, 5.45398) .. controls (3.38757, 5.44988) and (3.50827, 5.46958) .. (3.58007, 5.51308) .. controls (3.65177, 5.55658) and (3.72497, 5.65198) .. (3.79987, 5.79958) .. controls (4.00797, 6.21378) and (4.21407, 6.49378) .. (4.41817, 6.63918) .. controls (4.69707, 6.83518) and (5.02137, 6.93328) .. (5.39127, 6.93328) .. controls (5.64177, 6.93328) and (5.82417, 6.88878) .. (5.93837, 6.79988) .. controls (6.05247, 6.71088) and (6.10957, 6.60488) .. (6.10957, 6.48158) .. controls (6.10957, 6.38048) and (6.07577, 6.29618) .. (6.00807, 6.22848) .. controls (5.94037, 6.16068) and (5.85797, 6.12688) .. (5.76097, 6.12688) .. controls (5.66807, 6.12688) and (5.58927, 6.15518) .. (5.52457, 6.21178) .. controls (5.45987, 6.26838) and (5.42757, 6.33098) .. (5.42757, 6.39978) .. controls (5.42757, 6.45428) and (5.44377, 6.51388) .. (5.47607, 6.57858) .. controls (5.50037, 6.62298) and (5.51247, 6.65628) .. (5.51247, 6.67858) .. controls (5.51247, 6.70688) and (5.49727, 6.73418) .. (5.46697, 6.76048) -- cycle;%
+    \end{tikzpicture}%
+  }%
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand\setglyphlabel[2]{\expandafter\def\csname GlyphLabel#1\endcsname{#2}}
+\newcommand\getglyphlabel[1]{\csname GlyphLabel#1\endcsname}
+
+\newcommand\setpollglyph[2]{\expandafter\def\csname PollGlyph#1\endcsname{#2}}
+\newcommand\getpollglyph[3]{\csname PollGlyph#1\endcsname}
+
+\newcommand\setpollambi[2]{\expandafter\def\csname PollAmbi#1\endcsname{#2}}
+\newcommand\getpollambi[3]{\csname PollAmbi#1\endcsname}
+
+\newcommand\getambi[3]{\framecolorbox [\width] {Purple} {White} { \includegraphics [
+    width=#2cm,
+    height=#3cm,
+    keepaspectratio] {
+                    Images/Ambi_#1
+                }
+	}
+}
+
+\newcommand\getglyph[3]{\framecolorbox [\width] {\ThisWeekColor} {White} { \includegraphics [
+    width=#2cm,
+    height=#3cm,
+    keepaspectratio] {
+                    Images/Glyph_#1
+                }
+	}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\WeekColor}[1]{
+    \ifthenelse{\equal{#1}{Cyan}}
+        {\def\ThisWeekColor{Pink}
+        \def\NextWeekColor{Cyan}
+        \def\OtherColor{Red}
+        \def\LastWeekColor{Blue}
+    }{}
+    \ifthenelse{\equal{#1}{Red}}
+        {\def\ThisWeekColor{Cyan}
+        \def\NextWeekColor{Red}
+        \def\OtherColor{Blue}
+        \def\LastWeekColor{Pink}
+    }{}
+    \ifthenelse{\equal{#1}{Blue}}
+        {\def\ThisWeekColor{Red}
+        \def\NextWeekColor{Blue}
+        \def\OtherColor{Pink}
+        \def\LastWeekColor{Cyan}
+    }{}
+    \ifthenelse{\equal{#1}{Pink}}
+        {\def\ThisWeekColor{Blue}
+        \def\NextWeekColor{Pink}
+        \def\OtherColor{Cyan}
+        \def\LastWeekColor{Red}
+    }{}
+}
+
+\def\NextWeekColorBG{\NextWeekColor BG}
+\def\ThisWeekColorBG{\ThisWeekColor BG}
+\def\LastWeekColorBG{\LastWeekColor BG}
+\def\OtherColorBG{\OtherColor BG}
+
+\definecolor {White}    {HTML} {FFF3E1}  % 
+\definecolor {WhiteBG}  {HTML} {F5E3C9}  % 
+\definecolor {Black}    {HTML} {262522}  % 
+\definecolor {Green}    {HTML} {A7C957}  % DEFAULT BACKGROUND
+\definecolor {GreenBG}  {HTML} {91BC54}  % for lighter backgrounds and patterns
+\definecolor {Pear}     {HTML} {54994E}  % GREEN TEXT OVER WHITE BACKGROUND
+\definecolor {Blue}     {HTML} {5346BD}  % GLYPH CHALLENGE
+\definecolor {BlueBG}   {HTML} {4A3AB7}  % for lighter backgrounds and patterns 
+\definecolor {Cyan}     {HTML} {4DD1B6}  % GLYPH CHALLENGE
+\definecolor {CyanBG}   {HTML} {43BDB0}  % for lighter backgrounds and patterns
+\definecolor {Pink}     {HTML} {F547B0}  % GLYPH CHALLENGE
+\definecolor {PinkBG}   {HTML} {DE3DB0}  % for lighter backgrounds and patterns
+\definecolor {Red}      {HTML} {D5363D}  % GLYPH CHALLENGE
+\definecolor {RedBG}    {HTML} {C1233C}  % for lighter backgrounds and patterns
+\definecolor {Purple}   {HTML} {6F50CC}  % AMBIGRAM CHALLENGE
+\definecolor {PurpleBG} {HTML} {6049c2}  % for lighter backgrounds and patterns
+\definecolor {Yellow}   {HTML} {FFC661}  % AMBIGRAM CHALLENGE (HALL OF FAME)
+\definecolor {Orange}   {HTML} {EA6F44}  % AMBIGRAM CHALLENGE (HALL OF FAME)
+\definecolor {Pine}     {HTML} {1C6640}  % AMBIGRAM CHALLENGE (HALL OF FAME)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\def\GlyphChallengeAnnouncement{
+    \foreach \w/\x/\y/\z in {
+        %\ThisWeekColor/\ThisWeekGlyph/\ThisWeek/\Today,
+        %\LastWeekColor/\LastWeekGlyph/\LastWeek/\ThisWeek,
+        \NextWeekColor/\NextWeekGlyph/\Today/\NextWeek
+    }{
+        \Announcement{\w}{\x}{\origdate\daterange\y\z}{0}{Weekly Glyph Challenge}{100}{\w}{center}{0}
+    }
+}
+
+\def\GlyphChallengeFirst{
+    \ChallengeWinners{GlyphWinnerFirst}{\ThisWeekColor}{\GlyphWinnerFirst}{0}{12}
+}
+\def\GlyphChallengeSecond{
+    \ChallengeWinners{GlyphWinnerSecond}{\NextWeekColor}{\GlyphWinnerSecond}{0}{12}
+}
+\def\GlyphChallengeThird{
+    \ChallengeWinners{GlyphWinnerThird}{\OtherColor}{\GlyphWinnerThird}{0}{12}
+}
+
+\newcommand{\GlyphChallengeShowcase}[2]{
+    \Pollcase
+        {\NumberOfSubs} % #1 NUMBER OF OBJECTS IN POLL OR SHOWCASE
+        {#2} % #2 NUMBER OF COLUMNS
+        {#1} % #3 WIDTH (usually number of columns x2)
+        {Green} % #4 BACKGROUND COLOR % \ThisWeekColor
+        {\ThisWeekColor} % #5 MAIN COLOR
+        {Weekly Glyph Challenge} % #6 TITLE
+        {\ThisWeekGlyph} % #7 GLYPH OR WORD INSIDE THE BADGE
+        {circle, fill=White, draw=\ThisWeekColor, text=\ThisWeekColor} % #8 BADGE SHAPE
+        {\origdate\daterange\ThisWeek\Today} % #9 DATE (ORANGE SUBTITLE)
+        {1} % ##1 ASPECT RATIO (WIDTH OVER HEIGHT)
+        {.7} % ##2 MARGIN
+        {getglyph} % ##3 NAME OF MACRO TO BE CALLED
+        {draw=none} % ##4 DOGGO'S STUPID WORKAROUND
+        {60} % ##5 BADGE TEXT SIZE
+        {0.1} % ##6 SUBMISSION NODE INNER SEP
+}
+
+\newcommand{\GlyphPoll}[1] {\Pollcase
+    {\GlyphSuggestions} % #1 NUMBER OF OBJECTS IN POLL OR SHOWCASE
+    {#1} % #2 NUMBER OF COLUMNS
+    {10} % #3 WIDTH (usually number of columns x2)
+    {Green} % #4 BACKGROUND COLOR
+    {Orange} % #5 MAIN COLOR
+    {Glyph Suggestion Vote!} % #6 TITLE
+    {?} % #7 GLYPH OR WORD INSIDE THE BADGE
+    {circle, fill=Orange, draw=White, text=White} % #8 BADGE SHAPE
+    {\printdayoff\origdate\today} % #9 DATE (ORANGE SUBTITLE)
+    {1} % ##1 ASPECT RATIO (WIDTH OVER HEIGHT)
+    {0.7} % ##2 MARGIN (4 / number of columns)
+    {getpollglyph} % ##3 NAME OF MACRO TO BE CALLED
+    {PollNode} % ##4 DOGGO'S STUPID WORKAROUND
+    {70} % ##5 BADGE TEXT SIZE
+    {40} % ##6 POLL SUGGESTION TEXT SIZE (number of columns x9)
+}
+
+\def\AmbigramChallengeAnnouncement{
+    \foreach \w/\x/\y/\z in {
+        % Purple/\ThisWeekAmbigram/\ThisWeek/\Today,
+        % Purple/\LastWeekAmbigram/\LastWeek/\ThisWeek,
+        Purple/\NextWeekAmbigram/\Today/\NextWeek
+    }{
+        \Announcement{\w}{\bfseries\x}{\origdate\daterange\y\z}{3}{Weekly Ambigram Challenge}{80}{\w}{center}{0} % 80
+    }
+}
+
+
+\def\AmbigramChallengeFirst{
+    \ChallengeWinners{AmbiWinnerFirst}{Pink}{\AmbiWinnerFirst}{1}{15}
+}
+\def\AmbigramChallengeSecond{
+    \ChallengeWinners{AmbiWinnerSecond}{Cyan}{\AmbiWinnerSecond}{1}{15}
+}
+\def\AmbigramChallengeThird{
+    \ChallengeWinners{AmbiWinnerThird}{Red}{\AmbiWinnerThird}{1}{15}
+}
+
+\newcommand{\AmbigramChallengeShowcase}[2]{
+    \AmbiPollcase
+        {\NumberOfAmbis} % #1 NUMBER OF OBJECTS IN POLL OR SHOWCASE
+        {#2} % #2 NUMBER OF COLUMNS
+        {#1} % #3 WIDTH (usually number of columns x4)
+        {Purple} % #4 BACKGROUND COLOR
+        {Purple} % #5 MAIN COLOR
+        {Weekly Ambigram Challenge} % #6 TITLE
+        {\ThisWeekAmbigram} % #7 GLYPH OR WORD INSIDE THE BADGE
+        {rectangle, rounded corners=.5cm, fill=White, draw=Purple, text=Purple} % #8 BADGE SHAPE
+        {\origdate\daterange\ThisWeek\Today} % #9 DATE (ORANGE SUBTITLE)
+        {1.5} % ##1 ASPECT RATIO (WIDTH OVER HEIGHT)
+        {.75} % ##2 MARGIN
+        {getambi} % ##3 NAME OF MACRO TO BE CALLED
+        {draw=none} % ##4 DOGGO'S STUPID WORKAROUND
+        {22} % ##5 BADGE TEXT SIZE
+        {0.1} % ##6 SUBMISSION NODE INNER SEP
+}
+
+\newcommand{\AmbigramPoll}[1]{
+    \AmbiPollcase
+        {\AmbiSuggestions} % #1 NUMBER OF OBJECTS IN POLL OR SHOWCASE
+        {#1} % #2 NUMBER OF COLUMNS
+        {11} % #3 WIDTH (usually number of columns x4)
+        {Purple} % #4 BACKGROUND COLOR
+        {Orange} % #5 MAIN COLOR
+        {Ambigram Suggestion Vote!} % #6 TITLE
+        {?} % #7 GLYPH OR WORD INSIDE THE BADGE
+        {circle, fill=White, draw=Orange, text=Orange} % #8 BADGE SHAPE
+        {\printdayoff\origdate\today} % #9 DATE (ORANGE SUBTITLE)
+        {2} % ##1 ASPECT RATIO (WIDTH OVER HEIGHT)
+        {.7} % ##2 MARGIN
+        {getpollambi} % ##3 NAME OF MACRO TO BE CALLED
+        {PollNode} % ##4 DOGGO'S STUPID WORKAROUND
+        {35} % ##5 BADGE TEXT SIZE
+        {28} % ##6 POLL SUGGESTION TEXT SIZE
+}
+
+\def\SpecialAnnouncement{
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcounter{counter}
+
+\setlength{\fboxsep}{0cm}%
+\setlength{\fboxrule}{.1cm}%
+
+\usetikzlibrary{shadows.blur,shapes.geometric,positioning}
+
+\tikzset{
+fontscale/.style={
+    font=\fontsize{#1}{#1}\selectfont},
+PollNode/.style={
+    rectangle,
+    line width=.1cm,
+    minimum height=\GlyphHeight cm,
+    minimum width=\GlyphWidth cm},
+square/.style={
+    regular polygon,
+    regular polygon sides=4},
+WithShadow/.style={
+    blur shadow={
+        shadow blur extra rounding=.05cm,
+        shadow xshift=.075cm,
+        shadow yshift=-.0375cm,
+        shadow blur radius=.075cm,
+        shadow blur steps=25}
+    },
+}
+
+\NewDocumentCommand{\framecolorbox}{oommm}{
+%	#1 = width (optional)
+%	#2 = inner alignment (optional)
+%	#3 = frame color
+%	#4 = background color
+%	#5 = text
+\IfValueTF{#1}{%
+\IfValueTF{#2}
+    {\fcolorbox{#3}{#4}{\makebox[#1][#2]{#5}}}
+    {\fcolorbox{#3}{#4}{\makebox[#1]{#5}}}%
+}
+    {\fcolorbox{#3}{#4}{#5}}%
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\ChallengeWinners}[5]{
+    \begin{tikzpicture}[
+% FOR SOME BIZARRE REASON, SHADOWS OF \INCLUDEGRAPHICS ELEMENTS ARE SLIGHTLY SCALED UP
+    WithShadow/.style={
+        blur shadow={
+            shadow scale=.975}
+        },
+    ]
+	% SETTING IMAGE RATIO
+        \useasboundingbox (-#4-8, -7) rectangle (#4+8, 5);
+
+	% BACKGROUND
+        \fill [#2] (-#4-9, -9) rectangle (#4+9, 7);
+
+        % ARTWORK
+        \node [WithShadow] at (0,0) {\includegraphics[width=#5cm,height=8cm,keepaspectratio] {Images/#1}};
+    
+        % INVISIBLE SETUP FOR CENTERING THE WHOLE BANNER
+        \begin{scope}[transparent]
+            \node (nametag) at (0,-5.5) [rectangle, draw, inner sep=0, fontscale=40] {
+                \includegraphics[height=1.5cm]{Images/pfp/#3}\itshape\bfseries{~~#3}};
+            \draw (nametag.north west)++(.75,-.75) circle (.75cm) node (pfp) {};
+        \end{scope}
+
+        % NAME
+        \node at (nametag.east) [White, anchor=east, fontscale=40] {\itshape\bfseries{~~#3}};
+
+        % PROFILE PICTURE
+        \begin{scope}
+            \draw [draw=none,clip] (pfp) circle (.75cm);
+            \node at (pfp) {\includegraphics[height=1.5cm]{Images/pfp/#3}};
+        \end{scope}
+    
+    \end{tikzpicture}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\Announcement}[9]{
+    \begin{tikzpicture}
+	% SETTING IMAGE RATIO
+        \useasboundingbox (-8-#4, -7-#9) rectangle (8+#4, 5+#9);
+
+        % BACKGROUND
+        \fill [#1] (-9-#4, -9-#9) rectangle (9+#4, 7+#9);
+        \node [#1BG, rectangle, align=center, text width=#4*2cm+18.25cm, fontscale=20] at (0, -4.5) {\itshape \bfseries \pangrams \pangrams \pangrams};
+
+        % CANVAS
+        \node (canvas) at (0,-1.5) [fill, White, WithShadow, rectangle, minimum width=14cm+(#4*2cm), minimum height=9cm+(#9*2cm)] {};
+
+        % ICON
+        \node at (canvas.north) [fill, White, circle, minimum size=2.9cm] {};
+        \node at (canvas.north) {
+            %\includegraphics[height=1.8cm]{GA_icon}
+            \GALogo{1.8cm}{Black}{Green}
+            };
+
+        % TITLE AND SUBTITLE
+        \node (title) at (canvas.north) [Pear, anchor=north, yshift=-1cm, fontscale=30] {\itshape\bfseries#5};
+        \node at (title.south) [anchor=north, Orange, fontscale=16] {\bfseries#3};
+
+        % THAT "GLYPHS AND ALPHABETS" THINGY AT THE BOTTOM
+        \node at (canvas.south east) [text=Pear, anchor=south east, inner sep=.3cm, fontscale=14] {\itshape\bfseries Glyphs \& Alphabets~~};
+
+        % BIG GLYPH OR AMBIGRAM PROMPT IN THE CENTER
+        \node at ($(canvas.south)!.5!(title.south)$) [#7, fontscale=#6, align=#8, text width=#4+18cm] {#2};
+
+    \end{tikzpicture}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \setpollambi{12}{Silence}
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% LATEX HAS A LIMIT OF 9 ARGUMENTS PER COMMAND SO WE NEED TO "RENEW" THE COMMAND (AND RESTART COUNTING FROM ##1) TO BE ABLE TO ADD 10+ ARGUMENTS
+
+\newcommand{\neworrenewcommand}[1]{\providecommand{#1}{}\renewcommand{#1}}
+
+\newcommand{\Pollcase}[9]{
+    \neworrenewcommand{\foo}[6]{
+
+	\begin{tikzpicture}
+
+	% COMPUTE NUMBER OF ROWS
+	\pgfmathparse{div(#1, #2) + notequal(mod(#1, #2), 0)}
+	\edef\NumberOfRows{\pgfmathresult}
+
+	% DETERMINE GLYPH WIDTH BASED ON NUMBER OF COLUMNS
+	\pgfmathparse{(2*(#3-1) - (#2+1)*##2)/#2} 
+	\edef\GlyphWidth{\pgfmathresult}
+
+	% HEIGHT OF GLYPH BASED ON WIDTH AND ASPECT RATIO
+	\pgfmathparse{\GlyphWidth/##1}
+	\edef\GlyphHeight{\pgfmathresult}
+	
+	% COMPUTE THE CONSTANT \c THAT WILL MAKE EVERYTHING THE RIGHT SIZE
+	\pgfmathparse{(\NumberOfRows)*(\GlyphHeight+##2)+##2}
+	\edef\c{\pgfmathresult}
+
+	\useasboundingbox (-#3, 6-\c) rectangle (#3, 11); 
+
+	% BACKGROUND
+	\fill [#4] (-#3-1, -7-\c) rectangle (1+#3, 12);
+	\node [#4BG, rectangle, align=center, text width=#3cm+13cm] at (0,0) [fontscale=14] {\itshape \bfseries \pangrams \pangrams \pangrams}; 
+
+	% INVISIBLE SETUP FOR CENTERING THE WHOLE BANNER
+	\begin{scope}[transparent]
+		\node (whitebannerx) at (0, 9) [rectangle, minimum width=3cm+#3cm] {}; 
+		\node (badgex) at (whitebannerx.west) [#8, minimum size=3cm, fontscale=##5] {\bfseries#7};
+		\node (titlex) at ($(badgex.east)!.5!(whitebannerx.east)$) {};
+	\end{scope}
+
+	% BANNER ON TOP
+	\node (whitebanner) at ($(titlex)!.5!(0,9)$) [fill=White, WithShadow, rectangle, minimum height=2cm, minimum width=3cm+#3cm] {}; 
+	\node (colorbanner) at (whitebanner) [yshift=.125cm, fill=#5, rectangle, minimum height=1.25cm, minimum width=3cm+#3cm] {}; 
+
+	% GLYPH/AMBIGRAM SHOWCASE BADGE ON THE LEFT
+	\node (badge) at (whitebanner.west) [#8, minimum size=3cm, fontscale=##5, line width=.2cm, blur shadow={shadow blur extra rounding=1pt, shadow xshift=.1cm, shadow yshift=-.0375cm, shadow blur radius=.15cm, shadow blur steps=25}, align=center] {\bfseries#7};
+	% \node (badge) at (whitebanner.west) [yshift=-.1cm, \ThisWeekColor, fontscale=##5, align=center] {\bfseries#7};
+
+	% ROUND G&A "FI" ICON ON THE RIGHT
+	\node (icon) at (colorbanner.east) [anchor=east] {
+        %\includegraphics [height=1cm] {GA_logo}
+        \GALogo{1cm}{none}{White}
+        };
+
+	% CENTERED TITLE AND SUBTITLE (DATE) ON THE BANNER
+	\node (title) at ($(badge.east)!.5!(icon.west)$) [White, fontscale=20] {\itshape \bfseries #6};
+	\node at (title.south west) [yshift=-.35cm, anchor=west, Orange] {\bfseries #9};
+
+	% CANVAS
+	\fill [White, WithShadow] (1-#3, 7-\c) rectangle (-1+#3, 7); 
+
+	% DEFINE POLL GLYPHS
+        \pollglyphs
+
+	% DEFINE POLL AMBIGRAMS
+	\pollambigrams
+
+	\setcounter{counter}{1}
+
+	\foreach \y in {1,...,\NumberOfRows}{
+
+	% FIGURE OUT HOW MANY OBJECTS WE'RE DRAWING
+	\pgfmathparse{min(#2, #1 - #2*(\y-1))}
+	\edef\n{\pgfmathresult}
+
+	% FIND THE STARTING X-COORDINATE
+	\pgfmathparse{-(#3-1)+\GlyphWidth/2+##2} 
+	\edef\startx{\pgfmathresult}
+
+	% FIND THE HORIZONTAL DISTANCE BETWEEN EACH
+	\pgfmathparse{\GlyphWidth+##2}
+	\edef\stepx{\pgfmathresult}
+
+	% FIND THE CORRECT OFFSET TO ENSURE THAT THE ROW IS CENTERED
+	\pgfmathparse{(#2-\n)/2*\stepx}
+	\edef\rowoffset{\pgfmathresult}
+
+	% FIND THE STARTING Y-COORDINATE
+	\pgfmathparse{(7-\GlyphHeight/2-##2)}
+	\edef\starty{\pgfmathresult}
+
+	% FIND THE VERTICAL DISTANCE BETWEEN EACH
+	\pgfmathparse{\GlyphHeight+##2}
+	\edef\stepy{\pgfmathresult}
+
+	% NOW WE DRAW THE ROW
+		\foreach [evaluate={\z=int(\value{counter})}] \x in {1,...,\n} {
+
+			%CALCULATE COORDINATES
+			\pgfmathparse{\startx+(\x-1)*\stepx+\rowoffset}
+			\edef\xcoordinate{\pgfmathresult}
+			\pgfmathparse{\starty-(\y-1)*\stepy}
+			\edef\ycoordinate{\pgfmathresult}
+			% \pgfmathparse{int(#3*2.25)}
+			% \edef\ugh{\pgfmathresult}
+
+                % THIS IS ONLY DRAWN FOR THE POLLS (THANKS TO THE POLLNODE PARAMETER)
+			\node at (\xcoordinate, \ycoordinate) [#5, ##4, draw] {};
+
+			% CALL THE APPROPRIATE MACRO TO RETURN THE RIGHT IMAGE OR TEXT. WE PASS THE CURRENT DIMENSIONS, SO THEY ALL TAKE 3 ARGUMENTS
+			\node at (\xcoordinate, \ycoordinate) [align=center, fontscale=##6] {\csname ##3\endcsname {\z}{\GlyphWidth}{\GlyphHeight}};
+
+			% DRAW LABELS
+                \node at (\xcoordinate, \ycoordinate) [WithShadow, fill=#5, square, inner sep=0pt, minimum size=1.2cm, xshift=-(\GlyphWidth cm)/2,yshift=(\GlyphHeight cm)/2] {};
+                \node at (\xcoordinate, \ycoordinate) [text=White, inner sep=0pt, xshift=-(\GlyphWidth cm)/2,yshift=(\GlyphHeight cm)/2, fontscale=18] {\bfseries\getglyphlabel{\z}\addtocounter{counter}{1}};
+		}
+	}
+
+	\end{tikzpicture}
+    }
+    \foo
+}
+
+\newcommand{\AmbiPollcase}[9]{
+    \neworrenewcommand{\foo}[6]{
+
+	\begin{tikzpicture}
+
+	% COMPUTE NUMBER OF ROWS
+	\pgfmathparse{div(#1, #2) + notequal(mod(#1, #2), 0)}
+	\edef\NumberOfRows{\pgfmathresult}
+
+	% DETERMINE GLYPH WIDTH BASED ON NUMBER OF COLUMNS
+	\pgfmathparse{(2*(#3-1) - (#2+1)*##2)/#2} 
+	\edef\GlyphWidth{\pgfmathresult}
+
+	% HEIGHT OF GLYPH BASED ON WIDTH AND ASPECT RATIO
+	\pgfmathparse{\GlyphWidth/##1}
+	\edef\GlyphHeight{\pgfmathresult}
+	
+	% COMPUTE THE CONSTANT \c THAT WILL MAKE EVERYTHING THE RIGHT SIZE
+	\pgfmathparse{(\NumberOfRows)*(\GlyphHeight+##2)+##2}
+	\edef\c{\pgfmathresult}
+
+	\useasboundingbox (-#3, 6-\c) rectangle (#3, 11); 
+
+	% BACKGROUND
+	\fill [#4] (-#3-1, -7-\c) rectangle (1+#3, 12);
+	\node [#4BG, rectangle, align=center, text width=#3cm+13cm] at (0,0) [fontscale=14] {\itshape \bfseries \pangrams \pangrams \pangrams}; 
+
+	% INVISIBLE SETUP FOR CENTERING THE WHOLE BANNER
+	\begin{scope}[transparent]
+		\node (whitebannerx) at (0, 9) [rectangle, minimum width=3cm+#3cm] {}; 
+		\node (badgex) at (whitebannerx.west) [#8, minimum size=3cm, fontscale=##5] {\bfseries#7};
+		\node (titlex) at ($(badgex.east)!.5!(whitebannerx.east)$) {};
+	\end{scope}
+
+	% BANNER ON TOP
+	\node (whitebanner) at ($(titlex)!.5!(0,9)$) [fill=White, WithShadow, rectangle, minimum height=2cm, minimum width=3cm+#3cm] {}; 
+	\node (colorbanner) at (whitebanner) [yshift=.125cm, fill=#5, rectangle, minimum height=1.25cm, minimum width=3cm+#3cm] {}; 
+
+	% AMBIGRAM SHOWCASE BADGE ON THE LEFT
+	\node (badge) at (whitebanner.west) [#8, minimum size=3cm, fontscale=##5, line width=.2cm, blur shadow={shadow blur extra rounding=1pt, shadow xshift=.1cm, shadow yshift=-.0375cm, shadow blur radius=.15cm, shadow blur steps=25}, yshift=-.1cm, fontscale=##5, align=center] {\bfseries~~#7~~};
+
+	% ROUND G&A "FI" ICON ON THE RIGHT
+	\node (icon) at (colorbanner.east) [anchor=east] {
+        %\includegraphics [height=1cm] {GA_logo}
+        \GALogo{1cm}{none}{White}
+        };
+
+	% CENTERED TITLE AND SUBTITLE (DATE) ON THE BANNER
+	\node (title) at ($(badge.east)!.5!(icon.west)$) [White, fontscale=20] {\itshape \bfseries #6};
+	\node at (title.south west) [yshift=-.35cm, anchor=west, Orange] {\bfseries #9};
+
+	% CANVAS
+	\fill [White, WithShadow] (1-#3, 7-\c) rectangle (-1+#3, 7); 
+
+	% DEFINE POLL GLYPHS
+        \pollglyphs
+
+	% DEFINE POLL AMBIGRAMS
+	\pollambigrams
+
+	\setcounter{counter}{1}
+
+	\foreach \y in {1,...,\NumberOfRows}{
+
+	% FIGURE OUT HOW MANY OBJECTS WE'RE DRAWING
+	\pgfmathparse{min(#2, #1 - #2*(\y-1))}
+	\edef\n{\pgfmathresult}
+
+	% FIND THE STARTING X-COORDINATE
+	\pgfmathparse{-(#3-1)+\GlyphWidth/2+##2} 
+	\edef\startx{\pgfmathresult}
+
+	% FIND THE HORIZONTAL DISTANCE BETWEEN EACH
+	\pgfmathparse{\GlyphWidth+##2}
+	\edef\stepx{\pgfmathresult}
+
+	% FIND THE CORRECT OFFSET TO ENSURE THAT THE ROW IS CENTERED
+	\pgfmathparse{(#2-\n)/2*\stepx}
+	\edef\rowoffset{\pgfmathresult}
+
+	% FIND THE STARTING Y-COORDINATE
+	\pgfmathparse{(7-\GlyphHeight/2-##2)}
+	\edef\starty{\pgfmathresult}
+
+	% FIND THE VERTICAL DISTANCE BETWEEN EACH
+	\pgfmathparse{\GlyphHeight+##2}
+	\edef\stepy{\pgfmathresult}
+
+	% NOW WE DRAW THE ROW
+		\foreach [evaluate={\z=int(\value{counter})}] \x in {1,...,\n} {
+
+			%CALCULATE COORDINATES
+			\pgfmathparse{\startx+(\x-1)*\stepx+\rowoffset}
+			\edef\xcoordinate{\pgfmathresult}
+			\pgfmathparse{\starty-(\y-1)*\stepy}
+			\edef\ycoordinate{\pgfmathresult}
+			% \pgfmathparse{int(#3*2.25)}
+			% \edef\ugh{\pgfmathresult}
+
+                % THIS IS ONLY DRAWN FOR THE POLLS (THANKS TO THE POLLNODE PARAMETER)
+			\node at (\xcoordinate, \ycoordinate) [#5, ##4, draw] {};
+
+			% CALL THE APPROPRIATE MACRO TO RETURN THE RIGHT IMAGE OR TEXT. WE PASS THE CURRENT DIMENSIONS, SO THEY ALL TAKE 3 ARGUMENTS
+			\node at (\xcoordinate, \ycoordinate) [align=center, fontscale=##6] {\csname ##3\endcsname {\z}{\GlyphWidth}{\GlyphHeight}};
+
+			% DRAW LABELS
+                \node at (\xcoordinate, \ycoordinate) [WithShadow, fill=#5, square, inner sep=0pt, minimum size=1.2cm, xshift=-(\GlyphWidth cm)/2,yshift=(\GlyphHeight cm)/2] {};
+                \node at (\xcoordinate, \ycoordinate) [text=White, inner sep=0pt, xshift=-(\GlyphWidth cm)/2,yshift=(\GlyphHeight cm)/2, fontscale=18] {\bfseries\getglyphlabel{\z}\addtocounter{counter}{1}};
+		}
+	}
+
+	\end{tikzpicture}
+    }
+    \foo
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\isorangesign{ -- }%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\def\pangrams{The quick brown fox jumps over a lazy doggo. Zəfər, jaketini də papağini da götür, bu axşam hava çox soyuq olacaq. Съешь ещё этих мягких французских булок да выпей же чаю. Příliš žluťoučký kůň úpěl ďábelské ódy. Høj bly gom vandt fræk sexquiz på wc. À noite, vovô Kowalsky vê o ímã cair no pé do pingüim queixoso e vovó põe açúcar no chá de tâmaras do jabuti feliz. Ταχίστη αλώπηξ βαφής ψημένη γη, δρασκελίζει υπέρ νωθρού κυνός. Victor jagt zwölf Boxkämpfer quer über den großen Sylter Deich. Voix ambiguë d'un cœur qui au zéphyr préfère les jattes de kiwis. Под южно дърво, цъфтящо в синьо, бягаше малко пухкаво зайче. Jó foxim és don Quijote húszwattos lámpánál ülve egy pár bűvös cipőt készít. Dzigbe zã nyuie na wò, ɣeyiɣi didi aɖee nye sia no see, ɣeyiɣi aɖee nye sia tso esime míeyi suku. Ex-sportivul își fumează jucăuș țigara bând whisky cu tequila. Широкая электрификация южных губерний даст мощный толчок подъёму сельского хозяйства. Portez ce vieux whisky au juge blond qui fume. Ìwò̩fà ń yò̩ séji tó gbojúmó̩, ó hàn pákànpò̩ gan-an nis̩é̩ rè̩ bó dò̩la. Kæmi ný öxi hér, ykist þjófum nú bæði víl og ádrepa. D'fhuascail Íosa Úrmhac na hÓighe Beannaithe pór Éava agus Ádhaimh. Pranzo d'acqua fa volti sghembi. Törkylempijävongahdus. Cem vî feqoyê pîs zêdetir ji çar gulên xweşik hebûn. On sangen hauskaa, että polkupyörä on maanteiden jokapäiväinen ilmiö. Љубазни фењерџија чађавог лица хоће да ми покаже штос. Stróż pchnął kość w quiz gędźb vel fax myjń. Benjamín pidió una bebida de kiwi y fresa. Noé, sin vergüenza, la más exquisita champaña del menú. Do bạch kim rất quý nên sẽ dùng để lắp vô xương. Pijamalı hasta yağız şoföre çabucak güvendi. Įlinkdama fechtuotojo špaga sublykčiojusi pragręžė apvalų arbūzą. Ѕидарски пејзаж: шугав билмез со чудење џвака ќофте и кељ на туѓ цех. Nechť již hříšné saxofony ďáblů rozezvučí síň úděsnými tóny waltzu, tanga a quickstepu. Parciais fy jac codi baw hud llawn dŵr ger tŷ Mabon. Ο καλύμνιος σφουγγαράς ψιθύρισε πως θα βουτήξει χωρίς να διστάζει. Жебракують філософи при ґанку церкви в Гадячі, ще й шатро їхнє п'яне знаємо. Skarzhit ar gwerennoù-mañ, kavet e vo gwin betek fin ho puhez. The quick brown fox jumps over a lazy doggo. Zəfər, jaketini də papağini da götür, bu axşam hava çox soyuq olacaq. Съешь ещё этих мягких французских булок да выпей же чаю. Příliš žluťoučký kůň úpěl ďábelské ódy. Høj bly gom vandt fræk sexquiz på wc. À noite, vovô Kowalsky vê o ímã cair no pé do pingüim queixoso e vovó põe açúcar no chá de tâmaras do jabuti feliz. Ταχίστη αλώπηξ βαφής ψημένη γη, δρασκελίζει υπέρ νωθρού κυνός. Victor jagt zwölf Boxkämpfer quer über den großen Sylter Deich. Voix ambiguë d'un cœur qui au zéphyr préfère les jattes de kiwis. Под южно дърво, цъфтящо в синьо, бягаше малко пухкаво зайче. Jó foxim és don Quijote húszwattos lámpánál ülve egy pár bűvös cipőt készít. Dzigbe zã nyuie na wò, ɣeyiɣi didi aɖee nye sia no see, ɣeyiɣi aɖee nye sia tso esime míeyi suku. Ex-sportivul își fumează jucăuș țigara bând whisky cu tequila. Широкая электрификация южных губерний даст мощный толчок подъёму сельского хозяйства. Portez ce vieux whisky au juge blond qui fume. Ìwò̩fà ń yò̩ séji tó gbojúmó̩, ó hàn pákànpò̩ gan-an nis̩é̩ rè̩ bó dò̩la. Kæmi ný öxi hér, ykist þjófum nú bæði víl og ádrepa. D'fhuascail Íosa Úrmhac na hÓighe Beannaithe pór Éava agus Ádhaimh. Pranzo d'acqua fa volti sghembi. Törkylempijävongahdus. Cem vî feqoyê pîs zêdetir ji çar gulên xweşik hebûn. On sangen hauskaa, että polkupyörä on maanteiden jokapäiväinen ilmiö. Љубазни фењерџија чађавог лица хоће да ми покаже штос. Stróż pchnął kość w quiz gędźb vel fax myjń. Benjamín pidió una bebida de kiwi y fresa. Noé, sin vergüenza, la más exquisita champaña del menú. Do bạch kim rất quý nên sẽ dùng để lắp vô xương. Pijamalı hasta yağız şoföre çabucak güvendi. Įlinkdama fechtuotojo špaga sublykčiojusi pragręžė apvalų arbūzą. Ѕидарски пејзаж: шугав билмез со чудење џвака ќофте и кељ на туѓ цех. Nechť již hříšné saxofony ďáblů rozezvučí síň úděsnými tóny waltzu, tanga a quickstepu. Parciais fy jac codi baw hud llawn dŵr ger tŷ Mabon. Ο καλύμνιος σφουγγαράς ψιθύρισε πως θα βουτήξει χωρίς να διστάζει. Жебракують філософи при ґанку церкви в Гадячі, ще й шатро їхнє п'яне знаємо. Skarzhit ar gwerennoù-mañ, kavet e vo gwin betek fin ho puhez.The quick brown fox jumps over a lazy doggo. Zəfər, jaketini də papağini da götür, bu axşam hava çox soyuq olacaq. Съешь ещё этих мягких французских булок да выпей же чаю. Příliš žluťoučký kůň úpěl ďábelské ódy. Høj bly gom vandt fræk sexquiz på wc. À noite, vovô Kowalsky vê o ímã cair no pé do pingüim queixoso e vovó põe açúcar no chá de tâmaras do jabuti feliz. Ταχίστη αλώπηξ βαφής ψημένη γη, δρασκελίζει υπέρ νωθρού κυνός. Victor jagt zwölf Boxkämpfer quer über den großen Sylter Deich. Voix ambiguë d'un cœur qui au zéphyr préfère les jattes de kiwis. Под южно дърво, цъфтящо в синьо, бягаше малко пухкаво зайче. Jó foxim és don Quijote húszwattos lámpánál ülve egy pár bűvös cipőt készít. Dzigbe zã nyuie na wò, ɣeyiɣi didi aɖee nye sia no see, ɣeyiɣi aɖee nye sia tso esime míeyi suku. Ex-sportivul își fumează jucăuș țigara bând whisky cu tequila. Широкая электрификация южных губерний даст мощный толчок подъёму сельского хозяйства. Portez ce vieux whisky au juge blond qui fume. Ìwò̩fà ń yò̩ séji tó gbojúmó̩, ó hàn pákànpò̩ gan-an nis̩é̩ rè̩ bó dò̩la. Kæmi ný öxi hér, ykist þjófum nú bæði víl og ádrepa. D'fhuascail Íosa Úrmhac na hÓighe Beannaithe pór Éava agus Ádhaimh. Pranzo d'acqua fa volti sghembi. Törkylempijävongahdus. Cem vî feqoyê pîs zêdetir ji çar gulên xweşik hebûn. On sangen hauskaa, että polkupyörä on maanteiden jokapäiväinen ilmiö.}
+
+\def\pollglyphs{}
+\def\pollambigrams{}

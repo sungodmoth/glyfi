@@ -1,0 +1,312 @@
+{
+    "fonts": [{
+            "name": "STIXTwoText",
+            "load_as": "",
+            "excludes": ["370-3FF", "400-4FF", "500-52F", "1F00-1FFF"]
+        }, {
+            "name": "Noto Serif"
+        }, {
+            "name": "BabelStone Han",
+            "excludes": ["0-2E7F", "3040-30FF"]
+        }, {
+            "name": "Noto Emoji",
+            "size_percentage": 90
+        }, {
+            "name": "BabelStone Tibetan"
+        }, {
+            "name": "Tangut Yinchuan"
+        }, {
+            "name": "BabelStone Runic"
+        }, {
+            "name": "FreeSerif",
+            "excludes": ["530-2000"]
+        }, {
+            "name": "Noto Serif CJK JP",
+            "load_as":"\\setmainfont{NotoSerifCJK}[Extension = {.ttc}, UprightFont = {*-Regular}, BoldFont = {*-SemiBold}]"
+        }, {
+            "name": "Noto Serif CJK KR",
+            "load_as":"\\setmainfont{NotoSerifCJK}[Extension = {.ttc}, UprightFont = {*-Regular}, BoldFont = {*-SemiBold}]"
+        }, {
+            "name": "Noto Sans Adlam"
+        }, {
+            "name": "Noto Sans Arabic"
+        }, {
+            "name": "Noto Sans Devanagari"
+        }, {
+            "name": "Noto Sans Armenian"
+        }, {
+            "name": "Noto Sans Avestan"
+        }, {
+            "name": "Noto Sans Balinese"
+        }, {
+            "name": "Noto Sans Bamum"
+        }, {
+            "name": "Noto Sans Bassa Vah"
+        }, {
+            "name": "Noto Sans Bengali"
+        }, {
+            "name": "Noto Sans Bhaiksuki"
+        }, {
+            "name": "Noto Sans Brahmi"
+        }, {
+            "name": "Noto Sans Buginese"
+        }, {
+            "name": "Noto Sans Buhid"
+        }, {
+            "name": "Noto Sans Brahmi"
+        }, {
+            "name": "Noto Sans Canadian Aboriginal"
+        }, {
+            "name": "Noto Sans Carian"
+        }, {
+            "name": "Noto Sans Chakma"
+        }, {
+            "name": "Noto Sans Cham"
+        }, {
+            "name": "Noto Sans Cherokee"
+        }, {
+            "name": "Noto Sans Chorasmian"
+        }, {
+            "name": "Noto Sans Coptic"
+        }, {
+            "name": "Noto Sans Cuneiform"
+        }, {
+            "name": "Noto Sans Deseret"
+        }, {
+            "name": "Noto Sans Duployan"
+        }, {
+            "name": "Noto Sans Egyptian Hieroglyphs"
+        }, {
+            "name": "Noto Sans Elbasan"
+        }, {
+            "name": "Noto Sans Elymaic"
+        }, {
+            "name": "Noto Sans Ethiopic"
+        }, {
+            "name": "Noto Serif Georgian"
+        }, {
+            "name": "Noto Sans Glagolitic"
+        }, {
+            "name": "Noto Sans Gothic"
+        }, {
+            "name": "Noto Sans Grantha"
+        }, {
+            "name": "Noto Sans Gujarati"
+        }, {
+            "name": "Noto Sans Gunjala"
+        }, {
+            "name": "Noto Sans Gurmukhi"
+        }, {
+            "name": "Noto Sans Hanifi Rohingya"
+        }, {
+            "name": "Noto Sans Hanunoo"
+        }, {
+            "name": "Noto Sans Hatran"
+        }, {
+            "name": "Noto Sans Hebrew"
+        }, {
+            "name": "Noto Sans Imperial Aramaic"
+        }, {
+            "name": "Noto Sans Indic Siyaq Numbers"
+        }, {
+            "name": "Noto Sans Inscriptional Pahlavi"
+        }, {
+            "name": "Noto Sans Inscriptional Parthian"
+        }, {
+            "name": "Noto Sans Javanese"
+        }, {
+            "name": "Noto Sans Kaithi"
+        }, {
+            "name": "Noto Sans Kannada"
+        }, {
+            "name": "Noto Sans Kawi"
+        }, {
+            "name": "Noto Sans KayahLi"
+        }, {
+            "name": "Noto Sans Kharoshthi"
+        }, {
+            "name": "Noto Sans Khmer"
+        }, {
+            "name": "Noto Sans Khojki"
+        },
+        {
+            "name": "Noto Sans Khudawadi"
+        }, {
+            "name": "Noto Sans Lao"
+        }, {
+            "name": "Noto Sans Lepcha"
+        }, {
+            "name": "Noto Sans Limbu"
+        }, {
+            "name": "Noto Sans Linear A"
+        }, {
+            "name": "Noto Sans Lisu"
+        }, {
+            "name": "Noto Sans Lycian"
+        }, {
+            "name": "Noto Sans Lydian"
+        }, {
+            "name": "Noto Sans Mahajani"
+        }, {
+            "name": "Noto Serif Makasar"
+        }, {
+            "name": "Noto Sans Malayalam"
+        }, {
+            "name": "Noto Sans Mandaic"
+        }, {
+            "name": "Noto Sans Manichaean"
+        }, {
+            "name": "Noto Sans Marchen"
+        }, {
+            "name": "Noto Sans Masaram Gondi"
+        }, {
+            "name": "Noto Sans Math"
+        }, {
+            "name": "Noto Sans Mayan Numerals"
+        }, {
+            "name": "Noto Sans Medefaidrin"
+        }, {
+            "name": "Noto Sans Meetei Mayek"
+        }, {
+            "name": "Noto Sans Mende Kikakui"
+        }, {
+            "name": "Noto Sans Meroitic"
+        }, {
+            "name": "Noto Sans Miao"
+        }, {
+            "name": "Noto Sans Modi"
+        }, {
+            "name": "Noto Sans Mongolian"
+        }, {
+            "name": "Noto Sans Mro"
+        }, {
+            "name": "Noto Sans Multani"
+        }, {
+            "name": "Noto Sans Myanmar"
+        }, {
+            "name": "Noto Sans NKo"
+        }, {
+            "name": "Noto Sans Nabataean"
+        }, {
+            "name": "Noto Sans Nag Mundari"
+        }, {
+            "name": "Noto Sans Nandinagari"
+        }, {
+            "name": "Noto Sans New Tai Lue"
+        }, {
+            "name": "Noto Sans Newa"
+        }, {
+            "name": "Noto Sans Nushu"
+        }, {
+            "name": "Noto Sans Ogham"
+        }, {
+            "name": "Noto Sans Ol Chiki"
+        }, {
+            "name": "Noto Sans Old Hungarian"
+        }, {
+            "name": "Noto Sans Old Italic"
+        }, {
+            "name": "Noto Sans Old North Arabian"
+        }, {
+            "name": "Noto Sans Old Permic"
+        }, {
+            "name": "Noto Sans Old Persian"
+        }, {
+            "name": "Noto Sans Old Sogdian"
+        }, {
+            "name": "Noto Sans Old South Arabian"
+        }, {
+            "name": "Noto Sans Old Turkic"
+        }, {
+            "name": "Noto Sans Oriya"
+        }, {
+            "name": "Noto Sans Osage"
+        }, {
+            "name": "Noto Sans Osmanya"
+        }, {
+            "name": "Noto Sans Pahawh Hmong"
+        }, {
+            "name": "Noto Sans Palmyrene"
+        }, {
+            "name": "Noto Sans Pau Cin Hau"
+        }, {
+            "name": "Noto Sans Phags-Pa"
+        }, {
+            "name": "Noto Sans Phoenician"
+        }, {
+            "name": "Noto Sans Psalter Pahlavi"
+        }, {
+            "name": "Noto Sans Rejang"
+        }, {
+            "name": "Noto Sans Runic"
+        }, {
+            "name": "Noto Sans Samaritan"
+        }, {
+            "name": "Noto Sans Saurashtra"
+        }, {
+            "name": "Noto Sans Sharada"
+        }, {
+            "name": "Noto Sans Shavian"
+        }, {
+            "name": "Noto Sans Siddham"
+        }, {
+            "name": "Noto Sans SignWriting"
+        }, {
+            "name": "Noto Sans Sinhala"
+        }, {
+            "name": "Noto Sans Sogdian"
+        }, {
+            "name": "Noto Sans SoraSompeng"
+        }, {
+            "name": "Noto Sans Soyombo"
+        }, {
+            "name": "Noto Sans Sundanese"
+        }, {
+            "name": "Noto Sans Syloti Nagri"
+        }, {
+            "name": "Noto Sans Symbols"
+        }, {
+            "name": "Noto Sans Syriac"
+        }, {
+            "name": "Noto Sans Tagalog"
+        }, {
+            "name": "Noto Sans Tagbanwa"
+        }, {
+            "name": "Noto Sans Tai Le"
+        }, {
+            "name": "Noto Sans Tai Tham"
+        }, {
+            "name": "Noto Sans Tai Viet"
+        }, {
+            "name": "Noto Sans Takri"
+        }, {
+            "name": "Noto Sans Tamil"
+        }, {
+            "name": "Noto Sans Tangsa"
+        }, {
+            "name": "Noto Sans Telugu"
+        }, {
+            "name": "Noto Sans Thaana"
+        }, {
+            "name": "Noto Sans Thai"
+        }, {
+            "name": "Noto Sans Tifinagh"
+        }, {
+            "name": "Noto Sans Tirhuta"
+        }, {
+            "name": "Noto Sans Ugaritic"
+        }, {
+            "name": "Noto Sans Vai"
+        }, {
+            "name": "Noto Sans Vithkuqi"
+        }, {
+            "name": "Noto Sans Wancho"
+        }, {
+            "name": "Noto Sans Warang Citi"
+        }, {
+            "name": "Noto Sans Yi"
+        }, {
+            "name": "Noto Sans Zanabazar Square"
+        }
+    ]
+}
