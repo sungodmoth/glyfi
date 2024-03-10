@@ -1,4 +1,4 @@
-# weekly_challenges.py
+# generation.py
 
 Generates challenge-related images for the Glyphs and Alphabets discord server. Assumes a Linux environment, and invokes `pdftoppm`, `convert` (part of `imagemagick`), `lualatex` and `fc-match` (for local font information). 
 
@@ -14,6 +14,7 @@ For the full list of available options, consult ```weekly_challenges.py -h``` wh
 The LaTeX code in this repo is coauthored by one `doggo`.
 
 ## Table of Contents
+- [Table of Contents](#table-of-contents)
 - [Example Usage](#example-usage)
 - [Font Selection](#font-selection)
 
