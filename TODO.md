@@ -1,0 +1,28 @@
+## TODO
+- Moderation Commands
+  - [ ] `/announcement <message>` Edit an announcement message sent by the bot (presumably using a multi-line text edit control, assuming you can fit an entire message in there, that is) 
+  - [ ] `/skip ( "Glyph" | "Ambigram" )` Mark next week as special. 
+  - [x] `/submit ( "Glyph" | "Ambigram" ) <prompt>` 
+    - [x] Display a preview of the announcement message (or just outright send it in the bot chat or whatever) and add a ‘Confirm’ button.
+  - [ ] `/userdata <user> <entry> <value>`
+- User Commands
+  - [ ] `/help <topic>` Show help information for a specific topic. Specifically: `commands` to list all commands (only list moderation commands if the user is a moderator).
+  - [x] `/nickname` 
+  - [ ] `/profile`
+    - [x] self
+    - [ ] others
+    - [ ] button to change nickname 
+    - [ ] claim old submissions/wins (can’t the bot just download the entire message history of the channels in question and simply calculate this for all users that way?)
+  - [ ] `/weekinfo ( "Glyph" | "Ambigram" ) <week>` 
+- Events
+  - [x] Add submission on reaction add
+  - [x] Remove submission on reaction remove 
+- Weekly Tasks
+  - [ ] Remind moderators the day before or so if they haven’t selected a topic for next week’s challenge(s) yet or marked that week as special for either challenge. 
+  - [ ] Send weekly announcement message.
+    - [x] Automatically generate an image for the announcement message given a glyph (and optionally a font name, link to a font, and a size).
+    - [ ] During each week, we also post the announcement image with the week and glyph in the #glyph-submissions or #ambigram-submissions as a lil chat divider 
+  - [ ] Send last week’s submissions message.
+    - [ ] Automatically generate a panel of all submissions from the previous week.
+  - [ ] Send hall of fame message for the week before.
+    - [ ] Automatically generate images for this, if any.   
