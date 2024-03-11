@@ -128,18 +128,20 @@ fr"""
 """)
         ####################GLYPH_ANNOUNCEMENT##################
         if args.subcommand == "glyph_announcement":
+            glyph_formatted = fr"\begin{{tabular}}{{c}}{args.glyph}\end{{tabular}}"
             f.writelines(
 fr"""
-\def\NextWeekGlyph{{{match_and_format_font(args.glyph, fonts, args.font, args.size_percentage, 100, args.verbose)}}}
+\def\NextWeekGlyph{{{match_and_format_font(glyph_formatted, fonts, args.font, args.size_percentage, 100, args.verbose)}}}
 \begin{{document}}
 \GlyphChallengeAnnouncement
 \end{{document}}
 """)
         ####################AMBIGRAM_ANNOUNCEMENT###############
         if args.subcommand == "ambigram_announcement":
+            ambi_formatted = fr"\begin{{tabular}}{{c}}{args.ambi}\end{{tabular}}"
             f.writelines(
 fr"""
-\def\NextWeekAmbigram{{{match_and_format_font(args.ambi, fonts, args.font, args.size_percentage, 80, args.verbose)}}}
+\def\NextWeekAmbigram{{{match_and_format_font(ambi_formatted, fonts, args.font, args.size_percentage, 80, args.verbose)}}}
 \begin{{document}}
 \AmbigramChallengeAnnouncement
 \end{{document}}

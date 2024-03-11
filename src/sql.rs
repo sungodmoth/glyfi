@@ -7,11 +7,22 @@ use crate::{Error, info_sync, Res};
 
 pub const DB_PATH: &str = "glyfi.db";
 
+/// Data associated with a given glyph/ambi prompt
 #[derive(Clone, Debug, PartialEq)]
 pub struct PromptData {
     pub challenge: Challenge,
     pub prompt: String,
     pub size_percentage: Option<i16>
+}
+
+/// (Exists so that it can be a choice parameter in slash commands)
+#[derive(Copy, Clone, Debug, PartialEq, poise::ChoiceParameter)]
+#[repr(u8)]
+pub enum PromptOption {
+    #[name="size_percentage"]
+    SizePercentage,
+    #[name="prompt"]
+    Prompt
 }
 
 /// What challenge a submission belongs to.
@@ -403,9 +414,9 @@ pub async fn add_prompt(prompt_data: &PromptData) -> Result<i64, Error> {
         .map_err(|e| e.into())
 }
 
-/// Delete a prompt.
-/// Returns whether a prompt was deleted.
-pub async fn delete_prompt(id: i64) -> Result<bool, Error> {
+/// Delete the nth prompt in a given queue. Returns whether the operation was successful.
+pub async fn delete_prompt(challenge: Challenge, position: usize) -> Result<bool, Error> {
+    let id = get_prompt_id(challenge, position).await?;
     sqlx::query("DELETE FROM prompts WHERE rowid = ?")
         .bind(id)
         .execute(pool())
@@ -414,9 +425,30 @@ pub async fn delete_prompt(id: i64) -> Result<bool, Error> {
         .map_err(|e| e.into())
 }
 
+/// Replaces the prompt with given id with the data specified. Returns whether the operation was successful.
+pub async fn edit_prompt(id: i64, prompt_data: &PromptData) -> Result<bool, Error> {
+    sqlx::query("UPDATE prompts SET challenge = ?, prompt = ?, size_percentage = ? WHERE rowid = ?")
+        .bind(prompt_data.challenge.raw())
+        .bind(&prompt_data.prompt)
+        .bind(prompt_data.size_percentage)
+        .bind(id)
+        .execute(pool())
+        .await
+        .map(|r| r.rows_affected() > 0)
+        .map_err(|e| e.into())
+}
 
-/// Get a prompt by id.
-pub async fn get_prompt(id: i64) -> Result<PromptData, Error> {
+
+/// Get the id in the db table of the nth prompt in a given queue.
+pub async fn get_prompt_id(challenge: Challenge, position: usize) -> Result<i64, Error> {
+    let prompts = get_prompts(challenge).await?;
+    let name = poise::ChoiceParameter::name(&challenge);
+    Ok(prompts.get(position.checked_sub(1).ok_or("There is no 0th prompt.")?).ok_or(format!("There is no {position}th prompt in queue {name}."))?.0)
+}
+
+/// Get the id and data of the nth prompt in a given queue
+pub async fn get_prompt(challenge: Challenge, position: usize) -> Result<(i64,PromptData), Error> {
+    let id = get_prompt_id(challenge, position).await?;
     let res: (i64, String, Option<i16>) = sqlx::query_as("SELECT challenge, prompt, size_percentage FROM prompts WHERE rowid = ? LIMIT 1")
         .bind(id)
         .fetch_optional(pool())
@@ -425,19 +457,19 @@ pub async fn get_prompt(id: i64) -> Result<PromptData, Error> {
         .and_then(|r| {
             r.ok_or_else(|| format!("No prompt with id {}", id).into())
         })?;
-
-    Ok(PromptData{ challenge: Challenge::from(res.0), prompt: res.1, size_percentage: res.2 })
+    Ok( (id, PromptData {challenge, prompt: res.1, size_percentage: res.2}) )
 }
 
-
-/// Get all prompts for a challenge.
-pub async fn get_prompts(challenge: Challenge) -> Result<Vec<PromptData>, Error> {
+/// Get all prompts for a challenge, together with their ids in the db table.
+pub async fn get_prompts(challenge: Challenge) -> Result<Vec<(i64,PromptData)>, Error> {
     sqlx::query_as("SELECT rowid, prompt, size_percentage FROM prompts WHERE challenge = ? ORDER BY rowid ASC")
         .bind(challenge.raw())
         .fetch_all(pool())
         .await
         .map_err(|e| e.into())
-        .map(|x| x.into_iter().map(|(_, b, c): (i64, String, Option<i16>)| PromptData {challenge: challenge, prompt: b, size_percentage: c }).collect::<Vec<PromptData>>())
+        .map(|x| x.into_iter()
+            .map(|(a, b, c): (i64, String, Option<i16>)| (a, PromptData {challenge: challenge, prompt: b, size_percentage: c }))
+            .collect())
 }
 
 /// Get stats for a week.

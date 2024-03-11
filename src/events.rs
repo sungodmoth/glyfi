@@ -1,21 +1,10 @@
 use poise::serenity_prelude::*;
 use crate::{err, file, info, info_sync, sql, Res};
-use crate::core::{file_mtime, InteractionID, report_user_error};
+use crate::core::{file_mtime, report_user_error};
 use crate::server_data::{AMBIGRAM_SUBMISSION_CHANNEL_ID, BOT_USER_ID, DISCORD_BOT_TOKEN, GLYPH_SUBMISSION_CHANNEL_ID, SUBMIT_EMOJI_ID};
 use crate::sql::Challenge;
 
 pub struct GlyfiEvents;
-
-/// Reply to an interaction.
-macro_rules! reply_ephemeral {
-    ($ctx:expr, $i:expr, $fmt:literal $(,$arg:expr)*) => {
-        $i.create_response(&$ctx, CreateInteractionResponse::Message(
-            CreateInteractionResponseMessage::new()
-                .content(format!($fmt $(,$arg)*))
-                .ephemeral(true)
-        )).await
-    };
-}
 
 /// Execute code and notify the user if execution fails.
 macro_rules! run {
@@ -32,34 +21,6 @@ macro_rules! run {
     }
 }
 
-/// Mark that the announcement image for a challenge has been acknowledged.
-async fn act_on_confirm_announcement(ctx: &Context, i: &mut ComponentInteraction) -> Res {
-    let mut it = i.data.custom_id.split(':').skip(1);
-    let challenge = it.next().ok_or("Invalid interaction ID")?.parse::<Challenge>()?;
-    let time = it.next().ok_or("Invalid interaction ID")?.parse::<u64>()?;
-    let id = it.next().ok_or("Invalid interaction ID")?.parse::<i64>()?;
-
-    // Check that the file is not out of date.
-    let path = challenge.announcement_image_path();
-    let mtime = file_mtime(&path)?;
-    if time != mtime {
-        info!("Refusing to accept outdated announcement image for {:?}. Please regenerate it.", challenge);
-        return Ok(());
-    }
-
-    // Save prompt.
-    reply_ephemeral!(ctx, i, "Confirmed.")?;
-    Ok(())
-}
-
-async fn act_on_cancel_prompt(ctx: &Context, i: &mut ComponentInteraction) -> Res {
-    let mut it = i.data.custom_id.split(':').skip(1);
-    let id = it.next().ok_or("Invalid interaction ID")?.parse::<i64>()?;
-
-    let changed = sql::delete_prompt(id).await?;
-    reply_ephemeral!(ctx, i, "{}", if changed { "Cancelled." } else { "Entry has already been cancelled." })?;
-    Ok(())
-}
 
 /// Get the confirm emoji.
 fn confirm_reaction() -> ReactionType { return ReactionType::Unicode("✅".into()); }
@@ -89,48 +50,7 @@ async fn match_relevant_reaction_event(ctx: &Context, r: &Reaction) -> Option<(
 
 #[async_trait]
 impl EventHandler for GlyfiEvents {
-    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        match interaction {
-            // Ignore commands here.
-            Interaction::Command(_) => {}
-
-            // Buttons and other components.
-            Interaction::Component(mut i) => {
-                info!("Processing interaction: {}", i.data.custom_id);
-                let id: InteractionID = match i.data.custom_id.parse() {
-                    Ok(id) => id,
-                    Err(e) => {
-                        err!("{}", e);
-                        let _ = i.create_response(ctx, CreateInteractionResponse::Message(
-                            CreateInteractionResponseMessage::new()
-                                .content(format!("Error: Unknown ID '{}'", i.data.custom_id))
-                                .ephemeral(true)
-                        )).await;
-                        return;
-                    }
-                };
-
-                let res = match id {
-                    InteractionID::ConfirmAnnouncement => act_on_confirm_announcement(&ctx, &mut i).await,
-                    InteractionID::CancelPrompt => act_on_cancel_prompt(&ctx, &mut i).await,
-                };
-
-                if let Err(e) = res {
-                    err!("Error processing interaction: {}", e);
-                    let _ = i.create_response(ctx, CreateInteractionResponse::Message(
-                        CreateInteractionResponseMessage::new()
-                            .content(format!("Error processing interaction: {}", e))
-                            .ephemeral(true)
-                    )).await;
-                }
-            }
-
-            _ => {
-                info!("Unsupported interaction {:?}", interaction);
-            }
-        }
-    }
-
+    
     /// Check whether a user added the submit emoji.
     async fn reaction_add(&self, ctx: Context, r: Reaction) {
         let Some((user, message, challenge)) =

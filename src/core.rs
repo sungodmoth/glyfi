@@ -8,32 +8,6 @@ use crate::sql::__glyfi_fini_db;
 /// Default colour to use for embeds.
 pub const DEFAULT_EMBED_COLOUR: Colour = Colour::from_rgb(176, 199, 107);
 
-/// Button ids.
-#[derive(Clone, Copy, Debug)]
-#[repr(u8)]
-pub enum InteractionID {
-    ConfirmAnnouncement = 0,
-    CancelPrompt = 1,
-}
-
-impl InteractionID {
-    pub fn raw(self) -> u8 {
-        self as _
-    }
-}
-
-impl FromStr for InteractionID {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use InteractionID::*;
-        match s.split(':').next() {
-            Some("0") => Ok(ConfirmAnnouncement),
-            Some("1") => Ok(CancelPrompt),
-            id => Err(format!("Unknown interaction ID '{:?}'. Did you forget to update from_str()?", id).into())
-        }
-    }
-}
-
 /// Logging macros. These macros log an informational or error
 /// message. Depending on the program stage, the message will
 /// be displayed in the terminal or sent to Discord; The `sync`
