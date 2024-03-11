@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
-use poise::{CreateReply};
+use poise::CreateReply;
 use poise::serenity_prelude::{CacheHttp, Colour, CreateEmbed, CreateEmbedFooter, CreateMessage, UserId};
 use crate::{__glyfi_terminate_bot, Context, Error, Res};
 use crate::sql::__glyfi_fini_db;
@@ -112,6 +112,7 @@ pub async fn handle_command_error(e: poise::FrameworkError<'_, crate::Data, Erro
             // Get the nested error, if possible.
             let command_error = match e {
                 poise::FrameworkError::Command { error, .. } => error.to_string(),
+                poise::FrameworkError::CommandStructureMismatch { description, .. } => description.to_owned(),
                 _ => "".to_string()
             };
 

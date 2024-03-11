@@ -1,4 +1,3 @@
-/.idea
 /target
 
 ## Server-specific data (e.g. bot token, role ids etc.)
@@ -8,4 +7,5 @@
 /glyfi.db
 /glyfi.db-shm
 /glyfi.db-wal
+
 .vscode/launch.json

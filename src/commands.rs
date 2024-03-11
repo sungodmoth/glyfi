@@ -3,10 +3,10 @@ use poise::{ChoiceParameter, CreateReply};
 use poise::serenity_prelude::{ButtonStyle, CreateActionRow, CreateAttachment, CreateButton, CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter};
 use crate::{Context, Error, info, Res, sql};
 use crate::core::{create_embed, DEFAULT_EMBED_COLOUR, file_mtime, handle_command_error, InteractionID};
-use crate::sql::Challenge;
+use crate::sql::{Challenge, PromptData};
 
-async fn generate_challenge_image(challenge: Challenge, prompt: &str) -> Result<String, Error> {
-    let name = match challenge {
+async fn generate_challenge_image(prompt_data: &PromptData) -> Result<String, Error> {
+    let name = match prompt_data.challenge {
         Challenge::Glyph => "glyph_announcement",
         Challenge::Ambigram => "ambigram_announcement",
     };
@@ -14,7 +14,11 @@ async fn generate_challenge_image(challenge: Challenge, prompt: &str) -> Result<
     // Command for generating the image.
     let mut command = tokio::process::Command::new("./generate.py");
     command.arg(name);
-    command.arg(&prompt);
+    command.arg(&prompt_data.prompt);
+    if let Some(percentage) = prompt_data.size_percentage {
+        command.arg("--size_percentage");
+        command.arg(percentage.to_string());
+    }
     command.kill_on_drop(true);
     command.current_dir("./generation");
     info!("Running shell command {:?}", command);
@@ -22,7 +26,7 @@ async fn generate_challenge_image(challenge: Challenge, prompt: &str) -> Result<
     // Run it.
     let res = command.spawn()?.wait().await?;
     if !res.success() { return Err("Failed to generate image".into()); }
-    Ok(challenge.announcement_image_path())
+    Ok(prompt_data.challenge.announcement_image_path())
 }
 
 /// Edit your nickname.
@@ -124,7 +128,7 @@ pub async fn profile(ctx: Context<'_>) -> Res {
     Ok(())
 }
 
-#[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", subcommands("queue_add", "queue_list", "queue_remove", "queue_show"), default_member_permissions = "ADMINISTRATOR")]
+#[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", subcommands("queue_add", "queue_list", "queue_remove", "queue_preview"), default_member_permissions = "ADMINISTRATOR")]
 pub async fn queue(ctx: Context<'_>) -> Res { unreachable!(); }
 
 /// Add a glyph/ambigram prompt to the queue.
@@ -133,19 +137,22 @@ pub async fn queue_add(
     ctx: Context<'_>,
     #[description = "Which challenge to set the prompt for"] challenge: Challenge,
     #[description = "The prompt for the challenge"] prompt: String,
+    #[description = "Percentage modifying the size of the prompt"] size_percentage: Option<i16>
 ) -> Res {
+    let prompt_data = PromptData { challenge, prompt, size_percentage };
     // This is gonna take a while...
     ctx.defer_ephemeral().await?;
-    let path = generate_challenge_image(challenge, &prompt).await?;
+    let path = generate_challenge_image(&prompt_data).await?;
 
     // Save prompt.
-    let id = sql::add_prompt(challenge, &prompt).await?;
+    let id = sql::add_prompt(&prompt_data).await?;
 
     // Get mtime. This is just a little sanity check.
     let mtime = file_mtime(&path)?;
 
     // Reply with the image.
     ctx.send(CreateReply::default()
+        .content("Successfully added to queue!")
         .attachment(CreateAttachment::path(path).await?)
         .components(vec![CreateActionRow::Buttons(vec![
             /*CreateButton::new(format!(
@@ -174,14 +181,20 @@ pub async fn queue_list(
     // Get the queue.
     let queue = sql::get_prompts(challenge)
         .await?
-        .iter().map(|p| format!("- **{}:** {}", p.0, p.1))
+        .iter().enumerate()
+        .map(|(i, p)| 
+            if let Some(percentage) = p.size_percentage {
+                format!("- **{}:** {}, {}%", i+1, p.prompt, percentage) }
+            else {
+                format!("- **{}:** {}", i+1, p.prompt) 
+        } )
         .collect::<Vec<_>>()
         .join("\n");
 
     // Create embed.
     let embed = create_embed(&ctx)
         .author(CreateEmbedAuthor::new(format!("Queue for {}", challenge.name())))
-        .description(queue);
+        .description(format!("id, prompt, size_percentage\n{queue}"));
 
     // Send it.
     ctx.send(CreateReply::default().embed(embed)).await?;
@@ -204,14 +217,14 @@ pub async fn queue_remove(
 }
 
 /// Preview an entry in the queue.
-#[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", rename = "show", default_member_permissions = "ADMINISTRATOR")]
-pub async fn queue_show(
+#[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", rename = "preview", default_member_permissions = "ADMINISTRATOR")]
+pub async fn queue_preview(
     ctx: Context<'_>,
     #[description = "The ID of the entry to preview"] id: i64,
 ) -> Res {
     ctx.defer_ephemeral().await?;
-    let entry = sql::get_prompt(id).await?;
-    let path = generate_challenge_image(entry.0, &entry.1).await?;
+    let prompt_data = sql::get_prompt(id).await?;
+    let path = generate_challenge_image(&prompt_data).await?;
     ctx.send(CreateReply::default()
         .attachment(CreateAttachment::path(path).await?)
     ).await?;

@@ -7,6 +7,13 @@ use crate::{Error, info_sync, Res};
 
 pub const DB_PATH: &str = "glyfi.db";
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct PromptData {
+    pub challenge: Challenge,
+    pub prompt: String,
+    pub size_percentage: Option<i16>
+}
+
 /// What challenge a submission belongs to.
 #[derive(Copy, Clone, Debug, PartialEq, poise::ChoiceParameter)]
 #[repr(u8)]
@@ -243,7 +250,8 @@ pub async unsafe fn __glyfi_init_db() {
     sqlx::query(r#"
         CREATE TABLE IF NOT EXISTS prompts (
             challenge INTEGER NOT NULL,
-            prompt TEXT NOT NULL
+            prompt TEXT NOT NULL,
+            size_percentage INTEGER
         ) STRICT;
         "#).execute(pool()).await.unwrap();
     }
@@ -385,10 +393,11 @@ pub async fn set_nickname(user: UserId, name: &str) -> Res {
 
 /// Set the prompt for a challenge and week.
 /// Returns the id of the prompt in the DB.
-pub async fn add_prompt(challenge: Challenge, prompt: &str) -> Result<i64, Error> {
-    sqlx::query_scalar("INSERT INTO prompts (challenge, prompt) VALUES (?, ?) RETURNING rowid")
-        .bind(challenge.raw())
-        .bind(prompt)
+pub async fn add_prompt(prompt_data: &PromptData) -> Result<i64, Error> {
+    sqlx::query_scalar("INSERT INTO prompts (challenge, prompt, size_percentage) VALUES (?, ?, ?) RETURNING rowid")
+        .bind(prompt_data.challenge.raw())
+        .bind(&prompt_data.prompt)
+        .bind(prompt_data.size_percentage)
         .fetch_one(pool())
         .await
         .map_err(|e| e.into())
@@ -407,8 +416,8 @@ pub async fn delete_prompt(id: i64) -> Result<bool, Error> {
 
 
 /// Get a prompt by id.
-pub async fn get_prompt(id: i64) -> Result<(Challenge, String), Error> {
-    let res: (i64, String) = sqlx::query_as("SELECT challenge, prompt FROM prompts WHERE rowid = ? LIMIT 1")
+pub async fn get_prompt(id: i64) -> Result<PromptData, Error> {
+    let res: (i64, String, Option<i16>) = sqlx::query_as("SELECT challenge, prompt, size_percentage FROM prompts WHERE rowid = ? LIMIT 1")
         .bind(id)
         .fetch_optional(pool())
         .await
@@ -417,17 +426,18 @@ pub async fn get_prompt(id: i64) -> Result<(Challenge, String), Error> {
             r.ok_or_else(|| format!("No prompt with id {}", id).into())
         })?;
 
-    Ok((Challenge::from(res.0), res.1))
+    Ok(PromptData{ challenge: Challenge::from(res.0), prompt: res.1, size_percentage: res.2 })
 }
 
 
 /// Get all prompts for a challenge.
-pub async fn get_prompts(challenge: Challenge) -> Result<Vec<(i64, String)>, Error> {
-    sqlx::query_as("SELECT rowid, prompt FROM prompts WHERE challenge = ? ORDER BY rowid ASC")
+pub async fn get_prompts(challenge: Challenge) -> Result<Vec<PromptData>, Error> {
+    sqlx::query_as("SELECT rowid, prompt, size_percentage FROM prompts WHERE challenge = ? ORDER BY rowid ASC")
         .bind(challenge.raw())
         .fetch_all(pool())
         .await
         .map_err(|e| e.into())
+        .map(|x| x.into_iter().map(|(_, b, c): (i64, String, Option<i16>)| PromptData {challenge: challenge, prompt: b, size_percentage: c }).collect::<Vec<PromptData>>())
 }
 
 /// Get stats for a week.

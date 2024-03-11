@@ -9,8 +9,8 @@ import zoneinfo
 from utility import *
 
 #constants, could be made arguments later if needed
-RENDER_DPI = 1000
-TARGET_DPI = 500
+RENDER_DPI = 700
+DOWNSCALE_PERCENTAGE = 50
 
 def extract_from_pdf(pdf_filename, output_filename, render_dpi, downscale_percentage, verbose):
     ## Extracts a single image from an outputted pdf. We use both pdftoppm and imagemagick for this,
@@ -47,23 +47,23 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--out", type=str, default=None, help="name of the output png (if unspecified, will follow the name of the chosen subcommand e.g. glyph_announcement.png)", metavar="FILE")
     parser.add_argument("-d", "--date", type=str, default=None, help="date to be displayed on generated images (format DD/MM/YYYY) - defaults to today's date, but override may be needed if we are late")
     subcommands = parser.add_subparsers(title="subcommands", description="run ``<SUBCOMMAND> --help`` for that subcommand's usage", required=True, dest="subcommand")
-    glyph_announcement = subcommands.add_parser("glyph_announcement", help="glyph_announcement [-font FONT] [-size SIZE] <GLYPH>")
+    glyph_announcement = subcommands.add_parser("glyph_announcement", help="glyph_announcement [-font FONT] [-size_percentage PERCENT] <GLYPH>")
     glyph_announcement.add_argument("glyph", help="the glyph to be announced")
     glyph_announcement.add_argument("--font", type=str, default=None, help="the font to be used; normally this is determined automatically, but we may want to override it")
-    glyph_announcement.add_argument("--size", type=int, default=None, help="the font size to be used; usually default (100) is fine but may need to be overriden if too big/small")
-    ambigram_announcement = subcommands.add_parser("ambigram_announcement", help="ambigram_announcement [-font FONT] [-size SIZE] <AMBI>")
+    glyph_announcement.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
+    ambigram_announcement = subcommands.add_parser("ambigram_announcement", help="ambigram_announcement [-font FONT] [-size_percentage PERCENT] <AMBI>")
     ambigram_announcement.add_argument("ambi")
     ambigram_announcement.add_argument("--font", type=str, default=None, help="the font to be used; normally this is determined automatically, but we may want to override it")
-    ambigram_announcement.add_argument("--size", type=int, default=None, help="the font size to be used; usually default (80) is fine but may need to be overriden if too big/small")
-    glyph_poll = subcommands.add_parser("glyph_poll", help="glyph_poll [--cols N]  [-font FONT] [-size SIZE] <GLYPH>")
+    ambigram_announcement.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
+    glyph_poll = subcommands.add_parser("glyph_poll", help="glyph_poll [--cols N]  [-font FONT] [-size_percentage PERCENT] <GLYPH>")
     glyph_poll.add_argument("glyph")
     glyph_poll.add_argument("--font", type=str, default=None, help="the font to be used; normally this is determined automatically, but we may want to override it")
-    glyph_poll.add_argument("--size", type=int, default=None, help="the font size to be used; usually default (60) is fine but may need to be overriden if too big/small")
+    glyph_poll.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
     glyph_poll.add_argument("--cols", type=int, default=None, help="width in columns (determined from number of submissions by default)")
-    ambigram_poll = subcommands.add_parser("ambigram_poll", help="ambigram_poll [--cols N]  [-font FONT] [-size SIZE] <AMBI>")
+    ambigram_poll = subcommands.add_parser("ambigram_poll", help="ambigram_poll [--cols N]  [-font FONT] [-size_percentage PERCENT] <AMBI>")
     ambigram_poll.add_argument("ambi")
     ambigram_poll.add_argument("--font", type=str, default=None, help="the font to be used; normally this is determined automatically, but we may want to override it")
-    ambigram_poll.add_argument("--size", type=int, default=None, help="the font size to be used; usually default (22) is fine but may need to be overriden if too big/small")
+    ambigram_poll.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
     ambigram_poll.add_argument("--cols", type=int, default=None, help="width in columns (determined from number of submissions by default)")
     glyph_first = subcommands.add_parser("glyph_first", help="glyph_first <WINNER>")
     glyph_first.add_argument("winner")
@@ -130,7 +130,7 @@ fr"""
         if args.subcommand == "glyph_announcement":
             f.writelines(
 fr"""
-\def\NextWeekGlyph{{{match_and_format_font(args.glyph, fonts, args.font, args.size, 100, args.verbose)}}}
+\def\NextWeekGlyph{{{match_and_format_font(args.glyph, fonts, args.font, args.size_percentage, 100, args.verbose)}}}
 \begin{{document}}
 \GlyphChallengeAnnouncement
 \end{{document}}
@@ -139,14 +139,14 @@ fr"""
         if args.subcommand == "ambigram_announcement":
             f.writelines(
 fr"""
-\def\NextWeekAmbigram{{{match_and_format_font(args.ambi, fonts, args.font, args.size, 80, args.verbose)}}}
+\def\NextWeekAmbigram{{{match_and_format_font(args.ambi, fonts, args.font, args.size_percentage, 80, args.verbose)}}}
 \begin{{document}}
 \AmbigramChallengeAnnouncement
 \end{{document}}
 """)
         ####################GLYPH_POLL########################
         if args.subcommand == "glyph_poll":
-            subs = os.listdir("images/thisweek/glyph")
+            subs = sorted(os.listdir("images/thisweek/glyph"))
             buf = ""
             i = 1
             for sub in subs:
@@ -155,7 +155,7 @@ fr"""
                 i += 1
             f.writelines(
 fr"""
-\def\ThisWeekGlyph{{{match_and_format_font(args.glyph, fonts, args.font, args.size, 60, args.verbose)}}}
+\def\ThisWeekGlyph{{{match_and_format_font(args.glyph, fonts, args.font, args.size_percentage, 60, args.verbose)}}}
 \begin{{document}}
 \def\NumberOfSubs{{{len(subs)}}}
 {buf}
@@ -165,7 +165,7 @@ fr"""
 """)
         ####################AMBIGRAM_POLL#####################
         if args.subcommand == "ambigram_poll":
-            subs = os.listdir("images/thisweek/ambi")
+            subs = sorted(os.listdir("images/thisweek/ambi"))
             buf = ""
             i = 1
             for sub in subs:
@@ -174,7 +174,7 @@ fr"""
                 i += 1
             f.writelines(
 fr"""
-\def\ThisWeekAmbigram{{{match_and_format_font(args.ambi, fonts, args.font, args.size, args.verbose, 22)}}}
+\def\ThisWeekAmbigram{{{match_and_format_font(args.ambi, fonts, args.font, args.size_percentage, args.verbose, 22)}}}
 \begin{{document}}
 \def\NumberOfAmbis{{{len(subs)}}}
 {buf}
@@ -308,4 +308,4 @@ fr"""
     if latex_return != 0:
         print("LaTeX exited with an error, exiting...")
         sys.exit(latex_return)
-    sys.exit(extract_from_pdf("weekly_challenges.pdf", args.out or args.subcommand, 1000, 50, args.verbose))
+    sys.exit(extract_from_pdf("weekly_challenges.pdf", args.out or args.subcommand, RENDER_DPI, DOWNSCALE_PERCENTAGE, args.verbose))

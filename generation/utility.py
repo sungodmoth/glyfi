@@ -30,10 +30,12 @@ def font_size_format(fontname, size):
         buf = fr"\setmainfont{{{fontname}}}" + buf
     return buf
 
-def match_and_format_font(string, fonts, font_override, size_override, default_size, verbose):
+def match_and_format_font(string, fonts, font_override, size_percentage, default_size, verbose):
     ## Combines font_size_format and match_font to automatically find the correct
     ## font for a glyph and output the correct LaTeX sequence to display it.
-    size = size_override
+    if not size_percentage:
+        size_percentage = 100 
+    size = (default_size * size_percentage) // 100
     autofont = {'name': None}
     if not font_override:
         autofont = match_font(string, fonts)
@@ -41,7 +43,7 @@ def match_and_format_font(string, fonts, font_override, size_override, default_s
             autofont = {'name': None}
         #for some fonts, we may want to automatically scale them
         if "size_percentage" in autofont:
-            size = size_override or round((int(autofont["size_percentage"]) * default_size)/100)
+            size = (size * autofont["size_percentage"]) //100
         #we may want to load a font in a special way (e.g. particular options)
         if "load_as" in autofont:
             return autofont["load_as"] + font_size_format(None, size) + string

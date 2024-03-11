@@ -22,7 +22,7 @@ static mut __GLYFI_FRAMEWORK: Option<Arc<ser::ShardManager>> = None;
 static mut __GLYFI_RUNTIME: Option<tokio::runtime::Handle> = None;
 
 /// User data.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Data;
 
 /// Basic types.
