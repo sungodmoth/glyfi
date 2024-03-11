@@ -156,7 +156,7 @@ pub async fn queue_add(
 
     // Reply with the image.
     ctx.send(CreateReply::default()
-        .content("Successfully modified entry!")
+        .content("Successfully added entry!")
         .attachment(CreateAttachment::path(path).await?)
     ).await?;
     Ok(())
@@ -199,7 +199,7 @@ pub async fn queue_edit(
 
     // Reply with the image.
     ctx.send(CreateReply::default()
-        .content("Successfully added to queue!")
+        .content("Successfully modified entry!")
         .attachment(CreateAttachment::path(path).await?)
     ).await?;
     Ok(())
@@ -232,19 +232,19 @@ pub async fn queue_swap(
 pub async fn queue_move(
     ctx: Context<'_>,
     #[description = "Which challenge to move a prompt for"] challenge: Challenge,
-    #[description = "Position of prompt to move"] position1: usize,
-    #[description = "Position to move into"] position2: usize,
+    #[description = "Position of prompt to move"] from: usize,
+    #[description = "Position to move into"] to: usize,
 ) -> Res {
-    info!("Moving prompt {}:{} into {}:{} in db...", challenge.name(), position1, challenge.name(), position2);
+    info!("Moving prompt {}:{} into {}:{} in db...", challenge.name(), from, challenge.name(), to);
     let mut successful = true; 
 
-    match position1.cmp(&position2) {
+    match from.cmp(&to) {
     std::cmp::Ordering::Equal => { ctx.say("Trying to move prompt into the same position it's already in.").await?; return Ok(());},
-        std::cmp::Ordering::Greater => { for n in (position2+1)..=position1 {
-            successful &= swap_prompts(challenge, position2, n).await?;
+        std::cmp::Ordering::Greater => { for n in (to+1)..=from {
+            successful &= swap_prompts(challenge, to, n).await?;
         }},
-        std::cmp::Ordering::Less => { for n in ((position1+1)..=position2).rev() {
-            successful &= swap_prompts(challenge, position1, n).await?;
+        std::cmp::Ordering::Less => { for n in ((from+1)..=to).rev() {
+            successful &= swap_prompts(challenge, from, n).await?;
         }}, 
     }
     
