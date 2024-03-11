@@ -30,9 +30,13 @@ def font_size_format(fontname, size):
         buf = fr"\setmainfont{{{fontname}}}" + buf
     return buf
 
+def wrap_in_tabular(str):
+    return fr"\begin{{tabular}}{{c}}{str}\end{{tabular}}"
+
 def match_and_format_font(string, fonts, font_override, size_percentage, default_size, verbose):
     ## Combines font_size_format and match_font to automatically find the correct
     ## font for a glyph and output the correct LaTeX sequence to display it.
+    ## we wrap the string in a tabular so that newlines work, don't ask
     if not size_percentage:
         size_percentage = 100 
     size = (default_size * size_percentage) // 100
@@ -46,11 +50,11 @@ def match_and_format_font(string, fonts, font_override, size_percentage, default
             size = (size * autofont["size_percentage"]) //100
         #we may want to load a font in a special way (e.g. particular options)
         if "load_as" in autofont:
-            return autofont["load_as"] + font_size_format(None, size) + string
+            return autofont["load_as"] + font_size_format(None, size) + wrap_in_tabular(string)
     fontname = font_override or autofont['name']
     if verbose:
         print(f"{fontname} used for string {string}.")
-    return font_size_format(fontname, size) + string
+    return font_size_format(fontname, size) + wrap_in_tabular(string)
     
 def get_ranges(fontname):
     ## Given a font name, uses fontconfig to determine which glyph ranges it supports.
