@@ -287,7 +287,7 @@ fr"""
                     font_override = (a or [None]).pop()
                     if ambi:
                         i += 1
-                        suggestions_formatted += fr"""\setpollambi{{{i}}}{{{match_and_format_font(ambi, fonts, font_override, size_override, 40, args.verbose)}}}
+                        suggestions_formatted += fr"""\setpollambi{{{i}}}{{{match_and_format_font(ambi, fonts, font_override, size_override, 28, args.verbose)}}}
     """
             f.writelines(
 fr"""
