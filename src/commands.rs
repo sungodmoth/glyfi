@@ -4,7 +4,7 @@ use poise::{ChoiceParameter, CreateReply};
 use poise::serenity_prelude::{ButtonStyle, CreateActionRow, CreateAttachment, CreateButton, CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter};
 use crate::{Context, Error, info, Res, sql};
 use crate::core::{create_embed, DEFAULT_EMBED_COLOUR, file_mtime, handle_command_error};
-use crate::sql::{edit_prompt, get_prompt, get_prompt_id, Challenge, PromptData, PromptOption};
+use crate::sql::{edit_prompt, get_prompt, get_prompt_id, swap_prompts, Challenge, PromptData, PromptOption};
 
 async fn generate_challenge_image(prompt_data: &PromptData) -> Result<String, Error> {
     let name = match prompt_data.challenge {
@@ -129,7 +129,9 @@ pub async fn profile(ctx: Context<'_>) -> Res {
     Ok(())
 }
 
-#[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", subcommands("queue_add", "queue_list", "queue_remove", "queue_preview", "queue_edit"), default_member_permissions = "ADMINISTRATOR")]
+#[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error",
+ subcommands("queue_add", "queue_list", "queue_remove", "queue_preview", "queue_edit", "queue_swap", "queue_move"), 
+ default_member_permissions = "ADMINISTRATOR")]
 pub async fn queue(ctx: Context<'_>) -> Res { unreachable!(); }
 
 /// Add a new prompt to the given queue.
@@ -181,7 +183,12 @@ pub async fn queue_edit(
     }
 
     info!("Modifying prompt {}:{} to {:?} in db...", challenge.name(), position, prompt_data);
-    edit_prompt(id, &prompt_data).await?;
+    let successful = edit_prompt(id, &prompt_data).await?;
+
+    if !successful {
+        ctx.say("Database operation failed while modifying prompt.").await?;
+        return Ok(())
+    }
 
     // Generate image based on modified prompt.
     ctx.defer_ephemeral().await?;
@@ -195,6 +202,54 @@ pub async fn queue_edit(
         .content("Successfully added to queue!")
         .attachment(CreateAttachment::path(path).await?)
     ).await?;
+    Ok(())
+}
+
+/// Swap two existing entries of a given queue.
+#[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", rename = "swap", default_member_permissions = "ADMINISTRATOR")]
+pub async fn queue_swap(
+    ctx: Context<'_>,
+    #[description = "Which challenge to swap two prompts for"] challenge: Challenge,
+    #[description = "First position in the queue to swap"] position1: usize,
+    #[description = "Second position in the queue to swap"] position2: usize,
+) -> Res {
+
+    if position1 == position2 {
+        ctx.say("Trying to swap an entry with itself.").await?;
+        return Ok(());
+    }
+
+    info!("Swapping prompts {}:{} and {}:{} in db...", challenge.name(), position1, challenge.name(), position2);
+    let successful = swap_prompts(challenge, position1, position2).await?;
+
+    if !successful { ctx.say("Something went wrong in the database while swapping.").await?; }
+    else { ctx.say("Successfully swapped prompts!").await?; }
+    Ok(())
+}
+
+/// Move an entry of a queue into a specified position.
+#[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", rename = "move", default_member_permissions = "ADMINISTRATOR")]
+pub async fn queue_move(
+    ctx: Context<'_>,
+    #[description = "Which challenge to move a prompt for"] challenge: Challenge,
+    #[description = "Position of prompt to move"] position1: usize,
+    #[description = "Position to move into"] position2: usize,
+) -> Res {
+    info!("Moving prompt {}:{} into {}:{} in db...", challenge.name(), position1, challenge.name(), position2);
+    let mut successful = true; 
+
+    match position1.cmp(&position2) {
+    std::cmp::Ordering::Equal => { ctx.say("Trying to move prompt into the same position it's already in.").await?; return Ok(());},
+        std::cmp::Ordering::Greater => { for n in (position2+1)..=position1 {
+            successful &= swap_prompts(challenge, position2, n).await?;
+        }},
+        std::cmp::Ordering::Less => { for n in ((position1+1)..=position2).rev() {
+            successful &= swap_prompts(challenge, position1, n).await?;
+        }}, 
+    }
+    
+    if !successful { ctx.say("Database operation failed while moving prompt.").await?; }
+    else { ctx.say("Successfully moved prompt!").await?; }
     Ok(())
 }
 

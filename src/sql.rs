@@ -414,6 +414,13 @@ pub async fn add_prompt(prompt_data: &PromptData) -> Result<i64, Error> {
         .map_err(|e| e.into())
 }
 
+/// Swaps two prompts within a given queue. Returns whether the operation was successful
+pub async fn swap_prompts(challenge: Challenge, pos1: usize, pos2: usize) -> Result<bool, Error> {
+    let (id1, prompt_data1) = get_prompt(challenge, pos1).await?;
+    let (id2, prompt_data2) = get_prompt(challenge, pos2).await?;
+    Ok(edit_prompt(id1, &prompt_data2).await? & edit_prompt(id2, &prompt_data1).await?)
+}
+
 /// Delete the nth prompt in a given queue. Returns whether the operation was successful.
 pub async fn delete_prompt(challenge: Challenge, position: usize) -> Result<bool, Error> {
     let id = get_prompt_id(challenge, position).await?;
