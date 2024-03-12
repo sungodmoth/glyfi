@@ -12,6 +12,7 @@ def latex_escape(string):
     #for char in group2:
     #    string = string.replace(char, '\\'+char+'{}')
     return string
+
 def determine_columns(n, min_, max_=None):
     ## Determines the number of columns in which n submissions ought to be displayed.
     ## Maximally square but without being more columns than rows or fewer than min_ columns.
@@ -60,14 +61,23 @@ def split_script_boundaries(string, scripts):
     buf = ""
     current_script = ""
     consecutive_backslashes = 0
+    # characters that have the script tag Common but we would rather be treated as if they don't
+    # currently only includes paired brackets because it would be ugly if they were rendered
+    # in different fonts from each other
+    common_exceptions = "[](){}"
     while i < len(string):
         char = string[i]
         new_script = identify_script(char, scripts)
+        # why do we give special treatment to the Common script? well, as the name suggests it includes
+        # a lot of characters that are used in many scripts. In particular it includes combining characters
+        # common to multiple scripts, like U+0301 ACUTE ACCENT. Supposing we didn't have this special case,
+        # a word like `соба́ка` would be broken up as ['соба', '\u00000301', 'ка'], and font selection would
+        # try to render the acute in a latin font, for certainly awful results.
+        if new_script == "Common" and char not in common_exceptions:
+            buf += char
         # if we've encountered two consecutive backslashes then latex will interpret that as a line break
         # we always have to reset the font after a line break so the portion before it and the portion
         # after it should be split into different scripts
-        if new_script == "Common":
-            buf += char
         elif (not current_script or current_script == new_script) and consecutive_backslashes != 2:
             buf += char
             current_script = new_script
