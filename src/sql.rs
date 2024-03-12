@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use const_format::formatcp;
-use poise::serenity_prelude::{MessageId, UserId};
+use poise::serenity_prelude::{Member, MessageId, UserId};
 use sqlx::migrate::MigrateDatabase;
 use sqlx::{FromRow, Sqlite, SqlitePool};
 use crate::{Error, info_sync, Res};
@@ -266,13 +266,47 @@ pub async unsafe fn __glyfi_init_db() {
         ) STRICT;
         "#).execute(pool()).await.unwrap();
     }
+
+    /////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////
     
+
+    /// Add a user to the database.
+    pub async fn register_user(member: Member) -> Res {
+    sqlx::query(r#"
+    INSERT INTO users (id, nickname) VALUES (?, ?);
+        "#)
+        .bind(member.user.id.get() as i64)
+        .bind(member.nick.unwrap_or(member.user.name))
+        .execute(pool())
+        .await
+        .map(|_| ())
+        .map_err(|e| e.into())
+    }
+
+    /// Checks whether user is in the database.
+    pub async fn check_user(member: &Member) -> Result<bool, Error> {
+        sqlx::query(r#"SELECT id, nickname FROM users WHERE id = ? LIMIT 1"#)
+        .bind(member.user.id.get() as i64)
+        .fetch_optional(pool())
+        .await
+        .map(|x| x.is_some())
+        .map_err(|e| e.into())
+    }
+
+    /// Checks whether submission is in the database.
+    pub async fn check_submission(message_id: MessageId) -> Result<bool, Error> {
+        sqlx::query(r#"SELECT message FROM submissions WHERE message = ? LIMIT 1"#)
+        .bind(message_id.get() as i64)
+        .fetch_optional(pool())
+        .await
+        .map(|x| x.is_some())
+        .map_err(|e| e.into())
+    }
+
     /// Add a submission to the database.
-    pub async fn register_submission(
-        message: MessageId,
-        challenge: Challenge,
-        author: UserId,
-        link: &str,
+    pub async fn register_submission(message: MessageId, challenge: Challenge, 
+        author: UserId, link: &str,
     ) -> Res {
     sqlx::query(r#"
     INSERT INTO submissions (

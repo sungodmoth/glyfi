@@ -1,4 +1,4 @@
-use poise::serenity_prelude::{Attachment, MessageId};
+use poise::serenity_prelude::{Attachment, Member, MessageId, UserId};
 use tokio::{fs::{remove_file, File}, io::AsyncWriteExt};
 
 use crate::{info, sql::Challenge, Res};
@@ -7,7 +7,9 @@ use crate::{info, sql::Challenge, Res};
 pub async fn download_submission(attachment: &Attachment, message_id: MessageId, challenge: Challenge) -> Res {
     let content = attachment.download().await?;
     let short_name = challenge.short_name();
-    let extension = attachment.filename.split('.').last().ok_or("File doesn't have an extension.")?;
+    //we don't actually have to care about the file extension in the name since we're converting anyway
+    // let extension = attachment.filename.split('.').last().ok_or("File doesn't have an extension.")?;
+    let extension = "png";
     let prefix  = format!("generation/images/thisweek/{short_name}/{message_id}");
     let location = format!("{}.{}", prefix, extension);
     info!("Saving submission file to {}", location);
@@ -26,10 +28,28 @@ pub async fn delete_submission(message_id: MessageId, challenge: Challenge) -> R
     Ok(())
 }
 
+/// Download a user's profile picture and save it to the right location.
+pub async fn download_pfp(member: &Member) -> Res {
+    let response = reqwest::get(member.face()).await?;
+    let content = response.bytes().await?;
+    let extension = "png";
+    let user_id = member.user.id;
+    let prefix  = format!("generation/images/pfp/{user_id}");
+    let location = format!("{}.{}", prefix, extension);
+    info!("Saving pfp file to {}", location);
+    let mut file = File::create(&location).await?;
+    file.write_all(&content).await?;
+    info!("Converting {} to png...", location);
+    convert_image_type(&prefix, extension, "png").await?;
+    Ok(())
+}
+
 /// Use `imagemagick` to convert an image to a different filetype
 pub async fn convert_image_type(prefix: &str, current_ext: &str, desired_ext: &str) -> Res {
     let mut command = tokio::process::Command::new("convert");
-    command.arg(format!("{prefix}.{current_ext}"));
+    // with the [0] in the first argument we ensure that a gif will have only the
+    // first frame taken.
+    command.arg(format!("{prefix}.{current_ext}[0]"));
     command.arg(format!("{prefix}.{desired_ext}"));
     command.kill_on_drop(true);
     info!("Running shell command {:?}", command);
@@ -41,6 +61,8 @@ pub async fn convert_image_type(prefix: &str, current_ext: &str, desired_ext: &s
     // case `imagemagick` will still detect the correct file type and perform the
     // conversion correctly. In this case the converted file will of course have the
     // same file name as the original, overwriting it, so we needn't remove it.
+    // We exploit this in download_submission, naming a file with ".png" regardless
+    // of what it actually is, then converting it to a real png.
     if current_ext != desired_ext {
         info!("Removing original file {}.{}", prefix, current_ext);
         remove_file(format!("{prefix}.{current_ext}")).await?;

@@ -1,8 +1,9 @@
 use poise::serenity_prelude::*;
+use crate::file::download_pfp;
 use crate::{err, file, info, info_sync, sql, Res};
 use crate::core::{file_mtime, report_user_error};
-use crate::server_data::{AMBIGRAM_SUBMISSION_CHANNEL_ID, BOT_USER_ID, DISCORD_BOT_TOKEN, GLYPH_SUBMISSION_CHANNEL_ID, SUBMIT_EMOJI_ID};
-use crate::sql::Challenge;
+use crate::server_data::{AMBIGRAM_SUBMISSION_CHANNEL_ID, DISCORD_BOT_TOKEN, GLYPH_SUBMISSION_CHANNEL_ID, SUBMIT_EMOJI_ID};
+use crate::sql::{check_submission, check_user, register_user, Challenge};
 
 pub struct GlyfiEvents;
 
@@ -27,15 +28,14 @@ fn confirm_reaction() -> ReactionType { return ReactionType::Unicode("✅".into(
 
 /// Check if we care about a reaction event.
 async fn match_relevant_reaction_event(ctx: &Context, r: &Reaction) -> Option<(
-    UserId,
+    User,
     Message,
     Challenge,
 )> {
     // Ignore anything that isn’t the emoji we care about.
     if !matches!(r.emoji, ReactionType::Custom {id: SUBMIT_EMOJI_ID, .. }) { return None; };
-
     // Make sure we have all the information we need.
-    let Some(user) = r.user_id else { return None; };
+    let Ok(user) = r.user(&ctx).await else { return None; };
     let Ok(message) = r.message(&ctx).await else { return None; };
 
     // Ignore this outside of the submission channels.
@@ -63,13 +63,14 @@ impl EventHandler for GlyfiEvents {
                 return;
             };
         }
-
+        let user_id = user.id;
+        let Some(member) = r.member.clone() else { err!("Could not retrieve member for reaction event."); return };
         // If someone reacted w/ this emoji to someone else’s message, remove it.
-        if user != message.author.id { remove_reaction!(ctx, r); }
+        if user_id != message.author.id { remove_reaction!(ctx, r); }
 
         // Check the message for attachments.
         if message.attachments.len() != 1 {
-            report_user_error(&ctx, user, "Submissions must contain exactly one image").await;
+            report_user_error(&ctx, user_id, "Submissions must contain exactly one image").await;
             remove_reaction!(ctx, r);
         }
 
@@ -83,20 +84,32 @@ impl EventHandler for GlyfiEvents {
         // to do), so checking whether the height exists, which it only should
         // for images, will have to do.
         if att.height.is_none() {
-            report_user_error(&ctx, user, "Submissions must contain only images").await;
+            report_user_error(&ctx, user_id, "Submissions must contain only images").await;
             remove_reaction!(ctx, r);
         }
         
-        info!("Adding submission {} from {} for challenge {:?}", message.id, user, challenge);
-        // Add the submiss
-        file::download_submission(att, message.id, challenge);
-        
+        info!("Adding submission {} from {} for challenge {:?}", message.id, user_id, challenge);
+
         run!(
-            ctx, user,
-            async {sql::register_submission(message.id, challenge, user, &att.url).await?;
+            ctx, user_id,
+            async {sql::register_submission(message.id, challenge, user_id, &att.url).await?;
                 file::download_submission(att, message.id, challenge).await }.await,
             "Error adding submission"
         );
+
+        match check_user(&member).await {
+            Ok(false) => {
+                if let Err(e) = download_pfp(&member).await {
+                    err!("Error downloading user pfp: {}", e);
+                }
+                //the user isn't in the database
+                if let Err(e) = register_user(member).await {
+                    err!("Error adding user to database: {}", e);
+                }
+            }
+            Err(e) => { err!("Error checking whether user is in database: {}", e) }
+            _ => {}
+        }
 
         // Done.
         if let Err(e) = message.react(ctx, confirm_reaction()).await {
@@ -108,35 +121,52 @@ impl EventHandler for GlyfiEvents {
         // Check if we care about this.
         let Some((user, message, challenge)) =
             match_relevant_reaction_event(&ctx, &r).await else { return; };
-
+        
+        let user_id = user.id;
         // If the reaction that was removed is not the reaction of the
         // user that sent the message (which I guess can happen if there
         // is ever some amount of downtime on our part?) then ignore it.
-        if user != message.author.id { return; };
-
-        // If the reaction was removed by ourselves, ignore it. Else we
-        // end up trying to remove entries from the db that don't exist
-        // every time we remove a reaction for being in the wrong channel.
-        // Which is harmless, but not intended.
-        if BOT_USER_ID == message.author.id { return; };
+        if user_id != message.author.id { return; };
         
-        info!("Removing submission {} from {} for challenge {:?}", message.id, user, challenge);
-
-        // Remove the submission.
-        run!(
-            ctx, user,
-            async {sql::deregister_submission(message.id, challenge).await?;
-                file::delete_submission(message.id, challenge).await }.await,
-            "Error removing submission"
-        );
-
-        // Done.
+        // check if we had ever registered the submission before trying to remove it
+        // this will not be the case if, for instance, we just removed the user's
+        // reaction for being an invalid attachment type or in the wrong channel
+        match check_submission(message.id).await {
+            Ok(true) => {
+                info!("Removing submission {} from {} for challenge {:?}", message.id, user_id, challenge);
+                // Remove the submission.
+                run!(
+                    ctx, user_id,
+                    async {sql::deregister_submission(message.id, challenge).await?;
+                        file::delete_submission(message.id, challenge).await }.await,
+                        "Error removing submission"
+                    );
+                },
+            Err(e) => {err!("Error checking whether submission exists: {}", e); },
+            _ => {},
+        }        
 
         // Remove our confirmation reaction. This is allowed to fail in case
         // it was already removed somehow.
         let me = ctx.cache.current_user().id;
         let _ = message.delete_reaction(ctx, Some(me), confirm_reaction()).await;
     }
+    
+    async fn guild_member_update(&self, _ctx: Context, old_if_available: Option<Member>, new: Option<Member>, _g: GuildMemberUpdateEvent) {
+        if let (Some(old_member), Some(new_member)) = (old_if_available, new) {
+            match check_user(&new_member).await {
+                Ok(true) => { if old_member.face() != new_member.face() {
+                    if let Err(e) = download_pfp(&new_member).await {
+                        err!("Error downloading pfp: {}", e);
+                    }
+                }},
+                Err(e) => { err!("Error checking whether user already exists: {}", e); },
+                _ => {}
+            }
+ 
+        }
+    }
+
 
     async fn ready(&self, _ctx: Context, ready: Ready) {
         info_sync!("Glyfi running with id {}", ready.user.id);
