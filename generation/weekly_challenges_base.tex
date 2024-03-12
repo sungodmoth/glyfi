@@ -180,13 +180,13 @@ advdate
 }
 
 \def\GlyphChallengeFirst{
-    \ChallengeWinners{GlyphWinnerFirst}{\ThisWeekColor}{\GlyphWinnerFirst}{0}{12}
+    \ChallengeWinners{GlyphWinnerFirst}{\ThisWeekColor}{\GlyphWinnerFirst}{0}{12}{\GlyphWinnerFirstID}{\GlyphWinnerFirstSubID}{glyph}
 }
 \def\GlyphChallengeSecond{
-    \ChallengeWinners{GlyphWinnerSecond}{\NextWeekColor}{\GlyphWinnerSecond}{0}{12}
+    \ChallengeWinners{GlyphWinnerSecond}{\NextWeekColor}{\GlyphWinnerSecond}{0}{12}{\GlyphWinnerSecondID}{\GlyphWinnerSecondSubID}{glyph}
 }
 \def\GlyphChallengeThird{
-    \ChallengeWinners{GlyphWinnerThird}{\OtherColor}{\GlyphWinnerThird}{0}{12}
+    \ChallengeWinners{GlyphWinnerThird}{\OtherColor}{\GlyphWinnerThird}{0}{12}{\GlyphWinnerThirdID}{\GlyphWinnerThirdSubID}{glyph}
 }
 
 \newcommand{\GlyphChallengeShowcase}[2]{
@@ -238,13 +238,13 @@ advdate
 
 
 \def\AmbigramChallengeFirst{
-    \ChallengeWinners{AmbiWinnerFirst}{Pink}{\AmbiWinnerFirst}{1}{15}
+    \ChallengeWinners{AmbiWinnerFirst}{Pink}{\AmbiWinnerFirst}{1}{15}{\AmbiWinnerFirstID}{\AmbiWinnerFirstSubID}{ambi}
 }
 \def\AmbigramChallengeSecond{
-    \ChallengeWinners{AmbiWinnerSecond}{Cyan}{\AmbiWinnerSecond}{1}{15}
+    \ChallengeWinners{AmbiWinnerSecond}{Cyan}{\AmbiWinnerSecond}{1}{15}{\AmbiWinnerSecondID}{\AmbiWinnerSecondSubID}{ambi}
 }
 \def\AmbigramChallengeThird{
-    \ChallengeWinners{AmbiWinnerThird}{Red}{\AmbiWinnerThird}{1}{15}
+    \ChallengeWinners{AmbiWinnerThird}{Red}{\AmbiWinnerThird}{1}{15}{\AmbiWinnerThirdID}{\AmbiWinnerThirdSubID}{ambi}
 }
 
 \newcommand{\AmbigramChallengeShowcase}[2]{
@@ -336,7 +336,7 @@ WithShadow/.style={
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\newcommand{\ChallengeWinners}[5]{
+\newcommand{\ChallengeWinners}[8]{
     \begin{tikzpicture}[
 % FOR SOME BIZARRE REASON, SHADOWS OF \INCLUDEGRAPHICS ELEMENTS ARE SLIGHTLY SCALED UP
     WithShadow/.style={
@@ -351,12 +351,12 @@ WithShadow/.style={
         \fill [#2] (-#4-9, -9) rectangle (#4+9, 7);
 
         % ARTWORK
-        \node [WithShadow] at (0,0) {\includegraphics[width=#5cm,height=8cm,keepaspectratio] {Images/#1}};
+        \node [WithShadow] at (0,0) {\includegraphics[width=#5cm,height=8cm,keepaspectratio] {images/thisweek/#8/#7}};
     
         % INVISIBLE SETUP FOR CENTERING THE WHOLE BANNER
         \begin{scope}[transparent]
             \node (nametag) at (0,-5.5) [rectangle, draw, inner sep=0, fontscale=40] {
-                \includegraphics[height=1.5cm]{Images/pfp/#3}\itshape\bfseries{~~#3}};
+                \includegraphics[height=1.5cm]{images/pfp/#6}\itshape\bfseries{~~#3}};
             \draw (nametag.north west)++(.75,-.75) circle (.75cm) node (pfp) {};
         \end{scope}
 
@@ -366,7 +366,7 @@ WithShadow/.style={
         % PROFILE PICTURE
         \begin{scope}
             \draw [draw=none,clip] (pfp) circle (.75cm);
-            \node at (pfp) {\includegraphics[height=1.5cm]{Images/pfp/#3}};
+            \node at (pfp) {\includegraphics[height=1.5cm]{images/pfp/#6}};
         \end{scope}
     
     \end{tikzpicture}

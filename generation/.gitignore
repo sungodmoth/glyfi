@@ -6,6 +6,7 @@ weekly_challenges.pdf
 weekly_challenges.tex
 *.png
 *.jpg
+*.log
 *.jpeg
 *.pyc
 *.synctex.gz

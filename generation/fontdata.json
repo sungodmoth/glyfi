@@ -1,13 +1,17 @@
 {
     "fonts": [{
             "name": "STIXTwoText",
-            "load_as": "",
-            "excludes": ["370-3FF", "400-4FF", "500-52F", "1F00-1FFF"]
+            "load_as": "\\setmainfont{STIXTwoText}[Extension = {.otf}, UprightFont = {*-Regular}, ItalicFont = {*-Italic}, BoldFont = {*-Bold}, BoldItalicFont = {*-BoldItalic} ]",
+            "excludes": ["370-3FF", "400-4FF", "500-52F", "1F00-1FFF"],
+            "supports_styles": true
         }, {
             "name": "Noto Serif"
         }, {
+            "name": "FreeSerif",
+            "excludes": ["530-2000"]
+        }, {
             "name": "BabelStone Han",
-            "excludes": ["0-2E7F", "3040-30FF"]
+            "excludes": ["3040-30FF"]
         }, {
             "name": "Noto Emoji",
             "size_percentage": 90
@@ -18,14 +22,13 @@
         }, {
             "name": "BabelStone Runic"
         }, {
-            "name": "FreeSerif",
-            "excludes": ["530-2000"]
-        }, {
             "name": "Noto Serif CJK JP",
-            "load_as":"\\setmainfont{NotoSerifCJK}[Extension = {.ttc}, UprightFont = {*-Regular}, BoldFont = {*-SemiBold}]"
+            "load_as":"\\setmainfont{NotoSerifCJK}[Extension = {.ttc}, UprightFont = {*-Regular}, BoldFont = {*-SemiBold}]",
+            "supports_styles": true
         }, {
             "name": "Noto Serif CJK KR",
-            "load_as":"\\setmainfont{NotoSerifCJK}[Extension = {.ttc}, UprightFont = {*-Regular}, BoldFont = {*-SemiBold}]"
+            "load_as":"\\setmainfont{NotoSerifCJK}[Extension = {.ttc}, UprightFont = {*-Regular}, BoldFont = {*-SemiBold}]",
+            "supports_styles": true
         }, {
             "name": "Noto Sans Adlam"
         }, {

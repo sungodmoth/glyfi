@@ -30,31 +30,89 @@ def font_size_format(fontname, size):
         buf = fr"\setmainfont{{{fontname}}}" + buf
     return buf
 
-def wrap_in_tabular(str):
-    return fr"\begin{{tabular}}{{c}}{str}\end{{tabular}}"
+def parse_scriptdata():
+    #parses the Scripts.txt file which can be found at https://unicode.org/Public/UNIDATA/
+    dct = dict()
+    with open("Scripts.txt", "r") as f:
+        for line in f.readlines():
+            if line.strip() != "" and line[0] != "#":
+                rangestring, a = line.split(';')
+                longname = a.split(" ")[1].strip()
+                rangestring = rangestring.strip()
+                first, *last = rangestring.split("..")
+                last = last[0] if last else first
+                rnge = (int(first, 16), int(last, 16))
+                if dct.get(longname):
+                    dct[longname].append(rnge)
+                else:
+                    dct[longname] = [rnge]
+    return dct
 
-def match_and_format_font(string, fonts, font_override, size_percentage, default_size, verbose):
+def identify_script(char, scripts):
+    for script in scripts.keys():
+        if match_against_ranges(char, scripts[script]):
+            return script
+    return "Unknown"
+
+def split_script_boundaries(string, scripts):
+    res = []
+    i = 0
+    buf = ""
+    current_script = ""
+    consecutive_backslashes = 0
+    while i < len(string):
+        char = string[i]
+        new_script = identify_script(char, scripts)
+        # if we've encountered two consecutive backslashes then latex will interpret that as a line break
+        # we always have to reset the font after a line break so the portion before it and the portion
+        # after it should be split into different scripts
+        if new_script == "Common":
+            buf += char
+        elif (not current_script or current_script == new_script) and consecutive_backslashes != 2:
+            buf += char
+            current_script = new_script
+        else:
+            current_script = new_script
+            res.append(buf)
+            buf = char
+        if char == chr(92) and consecutive_backslashes != 2:
+            consecutive_backslashes += 1
+        else:
+            consecutive_backslashes = 0
+        i = i + 1
+    if buf:
+        res.append(buf)
+    return res
+
+def match_and_format_font(string, fonts, scripts, size_percentage, default_size, style, verbose):
     ## Combines font_size_format and match_font to automatically find the correct
-    ## font for a glyph and output the correct LaTeX sequence to display it.
+    ## font for a string and output the correct LaTeX sequence to display it.
     ## we wrap the string in a tabular so that newlines work, don't ask
-    if not size_percentage:
-        size_percentage = 100 
-    size = (default_size * size_percentage) // 100
-    autofont = {'name': None}
-    if not font_override:
-        autofont = match_font(string, fonts)
-        if not autofont:
-            autofont = {'name': None}
+    buf = ""
+    for substr in split_script_boundaries(string, scripts):
+        if not size_percentage:
+            size_percentage = 100
+        size = (default_size * size_percentage) // 100
+        font = {'name': None}
+        font = match_font(substr, fonts)
+        if not font:
+            font = {'name': None}
+        fontname = font['name']
         #for some fonts, we may want to automatically scale them
-        if "size_percentage" in autofont:
-            size = (size * autofont["size_percentage"]) //100
+        if "size_percentage" in font:
+            size = (size * font["size_percentage"]) //100
         #we may want to load a font in a special way (e.g. particular options)
-        if "load_as" in autofont:
-            return autofont["load_as"] + font_size_format(None, size) + wrap_in_tabular(string)
-    fontname = font_override or autofont['name']
-    if verbose:
-        print(f"{fontname} used for string {string}.")
-    return font_size_format(fontname, size) + wrap_in_tabular(string)
+        if "load_as" in font:
+            buf += font["load_as"]
+            font['name'] = None
+        if verbose:
+            print(f"{fontname} used for substring {substr} of string {string}.")
+        buf += font_size_format(font['name'], size) 
+        if "supports_styles" in font:
+            if font["supports_styles"] == True:
+                buf += style + " "
+        buf += substr
+    return buf
     
 def get_ranges(fontname):
     ## Given a font name, uses fontconfig to determine which glyph ranges it supports.
@@ -81,25 +139,25 @@ def parse_fontdata():
     with open("fontdata.json", "r") as f:
         return json.loads(f.read())["fonts"]
 
+def match_against_ranges(char, ranges):
+    for rnge in ranges:
+        if rnge[0] <= ord(char) <= rnge[1]:
+            return True
+
 def match_font(string, fonts):
     ## Given a string and a list of fonts, in the format parsed from
     ## fontdata.json, finds the first font in the list which supports
     ## (and does not exclude) all of the characters in the string.
     for (font, ranges) in fonts:
         for char in string:
-            match = False
-            for rnge in ranges:
-                if rnge[0] <= ord(char) <= rnge[1]:
-                    match = True
-                    break
+            match = match_against_ranges(char, ranges)
             if match == False:
                 break
             if "excludes" in font:
-                for rule in font["excludes"]:
-                    start, end = map(lambda x: int(x, 16), rule.split("-"))
-                    if start <= ord(char) <= end:
-                        match = False
-                if match == False:
+                exclude_ranges = map(lambda x:(int((y:=x.split("-"))[0], 16), int(y[1], 16)), font["excludes"])
+                matches_exclude = match_against_ranges(char, exclude_ranges)
+                if matches_exclude == True:
+                    match = False
                     break
         if match == True:
             return font
