@@ -123,6 +123,7 @@ impl EventHandler for GlyfiEvents {
             match_relevant_reaction_event(&ctx, &r).await else { return; };
         
         let user_id = user.id;
+        
         // If the reaction that was removed is not the reaction of the
         // user that sent the message (which I guess can happen if there
         // is ever some amount of downtime on our part?) then ignore it.
