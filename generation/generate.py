@@ -143,7 +143,7 @@ fr"""
 """)
         ####################GLYPH_ANNOUNCEMENT##################
         if args.subcommand == "glyph_announcement":
-            glyph_formatted = match_and_format_font(args.glyph, fonts, scripts, args.size_percentage, 100, None, args.verbose)
+            glyph_formatted = match_and_format_font(args.glyph, fonts, scripts, args.size_percentage, 100, "", args.verbose)
             f.writelines(
 fr"""
 \def\NextWeekGlyph{{{glyph_formatted}}}
@@ -153,7 +153,7 @@ fr"""
 """)
         ####################AMBIGRAM_ANNOUNCEMENT###############
         if args.subcommand == "ambigram_announcement":
-            ambi_formatted = match_and_format_font(args.ambi, fonts, scripts, args.size_percentage, 80, None, args.verbose)
+            ambi_formatted = match_and_format_font(args.ambi, fonts, scripts, args.size_percentage, 80, "", args.verbose)
             f.writelines(
 fr"""
 \def\NextWeekAmbigram{{{ambi_formatted}}}
@@ -172,7 +172,7 @@ fr"""
                 i += 1
             f.writelines(
 fr"""
-\def\ThisWeekGlyph{{{match_and_format_font(args.glyph, fonts, scripts, args.size_percentage, 60, None, args.verbose)}}}
+\def\ThisWeekGlyph{{{match_and_format_font(args.glyph, fonts, scripts, args.size_percentage, 60, "", args.verbose)}}}
 \begin{{document}}
 \def\NumberOfSubs{{{len(subs)}}}
 {buf}
@@ -191,7 +191,7 @@ fr"""
                 i += 1
             f.writelines(
 fr"""
-\def\ThisWeekAmbigram{{{match_and_format_font(args.ambi, fonts, scripts, args.size_percentage, 22, None, args.verbose)}}}
+\def\ThisWeekAmbigram{{{match_and_format_font(args.ambi, fonts, scripts, args.size_percentage, 22, "", args.verbose)}}}
 \begin{{document}}
 \def\NumberOfAmbis{{{len(subs)}}}
 {buf}
@@ -274,7 +274,7 @@ fr"""
             if args.glyphs:
                 for glyph in args.glyphs:
                     i += 1
-                    suggestions_formatted += fr"""\setpollglyph{{{i}}}{{{match_and_format_font(glyph, fonts, scripts, None, 40, None, args.verbose)}}}
+                    suggestions_formatted += fr"""\setpollglyph{{{i}}}{{{match_and_format_font(glyph, fonts, scripts, None, 40, "", args.verbose)}}}
     """
             else:
                 print("No arguments given; taking suggestions from glyph_suggestions.txt...")
@@ -286,7 +286,7 @@ fr"""
                     size_override = (a or [None]).pop()
                     if glyph:
                         i += 1
-                        suggestions_formatted += fr"""\setpollglyph{{{i}}}{{{match_and_format_font(glyph, fonts, scripts, size_override, 40, None, args.verbose)}}}
+                        suggestions_formatted += fr"""\setpollglyph{{{i}}}{{{match_and_format_font(glyph, fonts, scripts, size_override, 40, "", args.verbose)}}}
     """
             f.writelines(
 fr"""
@@ -306,7 +306,7 @@ fr"""
             if args.ambis:
                 for ambi in args.ambis:
                     i += 1
-                    suggestions_formatted += fr"""\setpollambi{{{i}}}{{{match_and_format_font(ambi, fonts, scripts, None, 28, args.verbose)}}}
+                    suggestions_formatted += fr"""\setpollambi{{{i}}}{{{match_and_format_font(ambi, fonts, scripts, None, 28, "", args.verbose)}}}
     """
             else:
                 print("No arguments given; taking suggestions from ambigram_suggestions.txt...")
@@ -318,7 +318,7 @@ fr"""
                     size_override = (a or [None]).pop()
                     if ambi:
                         i += 1
-                        suggestions_formatted += fr"""\setpollambi{{{i}}}{{{match_and_format_font(ambi, fonts, scripts, size_override, 28, args.verbose)}}}
+                        suggestions_formatted += fr"""\setpollambi{{{i}}}{{{match_and_format_font(ambi, fonts, scripts, size_override, 28, "", args.verbose)}}}
     """
             f.writelines(
 fr"""

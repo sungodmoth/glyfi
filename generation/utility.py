@@ -84,6 +84,9 @@ def split_script_boundaries(string, scripts):
         res.append(buf)
     return res
 
+def wrap_in_tabular(str):
+    return fr"\begin{{tabular}}{{c}}{str}\end{{tabular}}"
+
 def match_and_format_font(string, fonts, scripts, size_percentage, default_size, style, verbose):
     ## Combines font_size_format and match_font to automatically find the correct
     ## font for a string and output the correct LaTeX sequence to display it.
@@ -112,7 +115,7 @@ def match_and_format_font(string, fonts, scripts, size_percentage, default_size,
             if font["supports_styles"] == True:
                 buf += style + " "
         buf += substr
-    return buf
+    return font_size_format(None, size) + wrap_in_tabular(buf)
     
 def get_ranges(fontname):
     ## Given a font name, uses fontconfig to determine which glyph ranges it supports.
@@ -143,6 +146,7 @@ def match_against_ranges(char, ranges):
     for rnge in ranges:
         if rnge[0] <= ord(char) <= rnge[1]:
             return True
+    return False
 
 def match_font(string, fonts):
     ## Given a string and a list of fonts, in the format parsed from
