@@ -1,16 +1,18 @@
 use poise::serenity_prelude::{Attachment, Member, MessageId, UserId};
-use tokio::{fs::{remove_file, File}, io::AsyncWriteExt};
+use tokio::{fs::{self, remove_file, File}, io::AsyncWriteExt};
 
 use crate::{info, sql::Challenge, Res};
 
 /// Download a submission's image file to the file system
-pub async fn download_submission(attachment: &Attachment, message_id: MessageId, challenge: Challenge) -> Res {
+pub async fn download_submission(attachment: &Attachment, message_id: MessageId, challenge: Challenge, week_num: i64) -> Res {
     let content = attachment.download().await?;
     let short_name = challenge.short_name();
     //we don't actually have to care about the file extension in the name since we're converting anyway
     // let extension = attachment.filename.split('.').last().ok_or("File doesn't have an extension.")?;
     let extension = "png";
-    let prefix  = format!("generation/images/thisweek/{short_name}/{message_id}");
+    let dir = format!("generation/images/{short_name}/{week_num}");
+    fs::create_dir(&dir).await.or_else(|err| if err.kind() == std::io::ErrorKind::AlreadyExists{ Ok(()) } else{ Err(err) })?;
+    let prefix  = format!("{dir}/{message_id}");
     let location = format!("{}.{}", prefix, extension);
     info!("Saving submission file to {}", location);
     let mut file = File::create(&location).await?;
@@ -21,10 +23,10 @@ pub async fn download_submission(attachment: &Attachment, message_id: MessageId,
 }
 
 /// Remove a submission's image file from the file system
-pub async fn delete_submission(message_id: MessageId, challenge: Challenge) -> Res {
+pub async fn delete_submission(message_id: MessageId, challenge: Challenge, week_num: i64) -> Res {
     let short_name = challenge.short_name();
-    info!("Removing file generation/images/thisweek/{}/{}.png", short_name, message_id);
-    remove_file(format!("generation/images/thisweek/{short_name}/{message_id}.png")).await?;
+    info!("Removing file generation/images/{}/{}/{}.png", short_name, week_num, message_id);
+    remove_file(format!("generation/images/{short_name}/{week_num}/{message_id}.png")).await?;
     Ok(())
 }
 

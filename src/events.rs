@@ -3,7 +3,7 @@ use crate::file::download_pfp;
 use crate::{err, file, info, info_sync, sql, Res};
 use crate::core::{file_mtime, report_user_error};
 use crate::server_data::{AMBIGRAM_SUBMISSION_CHANNEL_ID, DISCORD_BOT_TOKEN, GLYPH_SUBMISSION_CHANNEL_ID, SUBMIT_EMOJI_ID};
-use crate::sql::{check_submission, check_user, register_user, Challenge};
+use crate::sql::{check_submission, check_user, current_week, register_user, Challenge};
 
 pub struct GlyfiEvents;
 
@@ -56,6 +56,10 @@ impl EventHandler for GlyfiEvents {
         let Some((user, message, challenge)) =
             match_relevant_reaction_event(&ctx, &r).await else { return; };
 
+        let Ok(current_week) = current_week().await else { err!("Could not retrieve current week."); return };
+
+        // TODO: check that the submission was actually posted within the current week.
+
         // Helper to remove the reaction on error and return.
         macro_rules! remove_reaction {
             ($ctx:expr, $r:expr) => {
@@ -92,8 +96,8 @@ impl EventHandler for GlyfiEvents {
 
         run!(
             ctx, user_id,
-            async {sql::register_submission(message.id, challenge, user_id, &att.url).await?;
-                file::download_submission(att, message.id, challenge).await }.await,
+            async {sql::register_submission(message.id, challenge, user_id, &att.url, current_week).await?;
+                file::download_submission(att, message.id, challenge, current_week).await }.await,
             "Error adding submission"
         );
 
@@ -122,6 +126,11 @@ impl EventHandler for GlyfiEvents {
         let Some((user, message, challenge)) =
             match_relevant_reaction_event(&ctx, &r).await else { return; };
         
+        let Ok(current_week) = current_week().await else { err!("Could not retrieve current week."); return };
+
+        // TODO: check that the submission was actually posted within the current week.
+
+
         let user_id = user.id;
         
         // If the reaction that was removed is not the reaction of the
@@ -138,8 +147,8 @@ impl EventHandler for GlyfiEvents {
                 // Remove the submission.
                 run!(
                     ctx, user_id,
-                    async {sql::deregister_submission(message.id, challenge).await?;
-                        file::delete_submission(message.id, challenge).await }.await,
+                    async {sql::deregister_submission(message.id, challenge, current_week).await?;
+                        file::delete_submission(message.id, challenge, current_week).await }.await,
                         "Error removing submission"
                     );
                 },

@@ -306,7 +306,7 @@ pub async unsafe fn __glyfi_init_db() {
 
     /// Add a submission to the database.
     pub async fn register_submission(message: MessageId, challenge: Challenge, 
-        author: UserId, link: &str,
+        author: UserId, link: &str, week_num: i64
     ) -> Res {
     sqlx::query(r#"
     INSERT INTO submissions (
@@ -318,7 +318,7 @@ pub async unsafe fn __glyfi_init_db() {
         ) VALUES (?, ?, ?, ?, ?);
         "#)
         .bind(message.get() as i64)
-        .bind(current_week().await?)
+        .bind(week_num)
         .bind(challenge as i64)
         .bind(author.get() as i64)
         .bind(link)
@@ -328,7 +328,7 @@ pub async unsafe fn __glyfi_init_db() {
         .map_err(|e| e.into())
     }
     /// Remove a submission from the database.
-    pub async fn deregister_submission(message: MessageId, challenge: Challenge) -> Res {
+    pub async fn deregister_submission(message: MessageId, challenge: Challenge, week_num: i64) -> Res {
         sqlx::query(r#"
             DELETE FROM submissions
             WHERE message = ?
@@ -336,7 +336,7 @@ pub async unsafe fn __glyfi_init_db() {
             AND challenge = ?;
         "#)
             .bind(message.get() as i64)
-            .bind(current_week().await?)
+            .bind(week_num)
             .bind(challenge as i64)
             .execute(pool())
             .await

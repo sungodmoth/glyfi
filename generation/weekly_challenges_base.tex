@@ -180,13 +180,13 @@ advdate
 }
 
 \def\GlyphChallengeFirst{
-    \ChallengeWinners{GlyphWinnerFirst}{\ThisWeekColor}{\GlyphWinnerFirst}{0}{12}{\GlyphWinnerFirstID}{\GlyphWinnerFirstSubID}{glyph}
+    \ChallengeWinners{GlyphWinnerFirst}{\ThisWeekColor}{\GlyphWinnerFirst}{0}{12}{\GlyphWinnerFirstID}{\GlyphWinnerFirstSubID}{glyph}{\WeekNum}
 }
 \def\GlyphChallengeSecond{
-    \ChallengeWinners{GlyphWinnerSecond}{\NextWeekColor}{\GlyphWinnerSecond}{0}{12}{\GlyphWinnerSecondID}{\GlyphWinnerSecondSubID}{glyph}
+    \ChallengeWinners{GlyphWinnerSecond}{\NextWeekColor}{\GlyphWinnerSecond}{0}{12}{\GlyphWinnerSecondID}{\GlyphWinnerSecondSubID}{glyph}{\WeekNum}
 }
 \def\GlyphChallengeThird{
-    \ChallengeWinners{GlyphWinnerThird}{\OtherColor}{\GlyphWinnerThird}{0}{12}{\GlyphWinnerThirdID}{\GlyphWinnerThirdSubID}{glyph}
+    \ChallengeWinners{GlyphWinnerThird}{\OtherColor}{\GlyphWinnerThird}{0}{12}{\GlyphWinnerThirdID}{\GlyphWinnerThirdSubID}{glyph}{\WeekNum}
 }
 
 \newcommand{\GlyphChallengeShowcase}[2]{
@@ -238,13 +238,13 @@ advdate
 
 
 \def\AmbigramChallengeFirst{
-    \ChallengeWinners{AmbiWinnerFirst}{Pink}{\AmbiWinnerFirst}{1}{15}{\AmbiWinnerFirstID}{\AmbiWinnerFirstSubID}{ambi}
+    \ChallengeWinners{AmbiWinnerFirst}{Pink}{\AmbiWinnerFirst}{1}{15}{\AmbiWinnerFirstID}{\AmbiWinnerFirstSubID}{ambi}{\WeekNum}
 }
 \def\AmbigramChallengeSecond{
-    \ChallengeWinners{AmbiWinnerSecond}{Cyan}{\AmbiWinnerSecond}{1}{15}{\AmbiWinnerSecondID}{\AmbiWinnerSecondSubID}{ambi}
+    \ChallengeWinners{AmbiWinnerSecond}{Cyan}{\AmbiWinnerSecond}{1}{15}{\AmbiWinnerSecondID}{\AmbiWinnerSecondSubID}{ambi}{\WeekNum}
 }
 \def\AmbigramChallengeThird{
-    \ChallengeWinners{AmbiWinnerThird}{Red}{\AmbiWinnerThird}{1}{15}{\AmbiWinnerThirdID}{\AmbiWinnerThirdSubID}{ambi}
+    \ChallengeWinners{AmbiWinnerThird}{Red}{\AmbiWinnerThird}{1}{15}{\AmbiWinnerThirdID}{\AmbiWinnerThirdSubID}{ambi}{\WeekNum}
 }
 
 \newcommand{\AmbigramChallengeShowcase}[2]{
@@ -336,7 +336,7 @@ WithShadow/.style={
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\newcommand{\ChallengeWinners}[8]{
+\newcommand{\ChallengeWinners}[9]{
     \begin{tikzpicture}[
 % FOR SOME BIZARRE REASON, SHADOWS OF \INCLUDEGRAPHICS ELEMENTS ARE SLIGHTLY SCALED UP
     WithShadow/.style={
@@ -351,7 +351,7 @@ WithShadow/.style={
         \fill [#2] (-#4-9, -9) rectangle (#4+9, 7);
 
         % ARTWORK
-        \node [WithShadow] at (0,0) {\includegraphics[width=#5cm,height=8cm,keepaspectratio] {images/thisweek/#8/#7}};
+        \node [WithShadow] at (0,0) {\includegraphics[width=#5cm,height=8cm,keepaspectratio] {images/#8/#9/#7}};
     
         % INVISIBLE SETUP FOR CENTERING THE WHOLE BANNER
         \begin{scope}[transparent]

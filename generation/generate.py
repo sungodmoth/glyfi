@@ -47,49 +47,59 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--out", type=str, default=None, help="name of the output png (if unspecified, will follow the name of the chosen subcommand e.g. glyph_announcement.png)", metavar="FILE")
     parser.add_argument("-d", "--date", type=str, default=None, help="date to be displayed on generated images (format DD/MM/YYYY) - defaults to today's date, but override may be needed if we are late")
     subcommands = parser.add_subparsers(title="subcommands", description="run ``<SUBCOMMAND> --help`` for that subcommand's usage", required=True, dest="subcommand")
-    glyph_announcement = subcommands.add_parser("glyph_announcement", help="glyph_announcement [-size_percentage PERCENT] <GLYPH>")
+    glyph_announcement = subcommands.add_parser("glyph_announcement", help="glyph_announcement [-size_percentage PERCENT] <GLYPH> <WEEK>")
     glyph_announcement.add_argument("glyph", help="the glyph to be announced")
+    glyph_announcement.add_argument("week", type=int, help="id of the week to generate for")
     glyph_announcement.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    ambigram_announcement = subcommands.add_parser("ambigram_announcement", help="ambigram_announcement [-size_percentage PERCENT] <AMBI>")
+    ambigram_announcement = subcommands.add_parser("ambigram_announcement", help="ambigram_announcement [-size_percentage PERCENT] <AMBI> <WEEK>")
     ambigram_announcement.add_argument("ambi")
+    ambigram_announcement.add_argument("week", type=int, help="id of the week to generate for")
     ambigram_announcement.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    glyph_poll = subcommands.add_parser("glyph_poll", help="glyph_poll [--cols N] [-size_percentage PERCENT] <GLYPH>")
+    glyph_poll = subcommands.add_parser("glyph_poll", help="glyph_poll [--cols N] [-size_percentage PERCENT] <GLYPH> <WEEK>")
     glyph_poll.add_argument("glyph")
+    glyph_poll.add_argument("week", type=int, help="id of the week to generate for")
     glyph_poll.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
     glyph_poll.add_argument("--cols", type=int, default=None, help="width in columns (determined from number of submissions by default)")
-    ambigram_poll = subcommands.add_parser("ambigram_poll", help="ambigram_poll [--cols N] [-size_percentage PERCENT] <AMBI>")
+    ambigram_poll = subcommands.add_parser("ambigram_poll", help="ambigram_poll [--cols N] [-size_percentage PERCENT] <AMBI> <WEEK>")
     ambigram_poll.add_argument("ambi")
+    ambigram_poll.add_argument("week", type=int, help="id of the week to generate for")
     ambigram_poll.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
     ambigram_poll.add_argument("--cols", type=int, default=None, help="width in columns (determined from number of submissions by default)")
-    glyph_first = subcommands.add_parser("glyph_first", help="glyph_first <NICKNAME> <USER_ID> <SUB_ID> [-size_percentage PERCENT]")
+    glyph_first = subcommands.add_parser("glyph_first", help="glyph_first <NICKNAME> <USER_ID> <SUB_ID> <WEEK> [-size_percentage PERCENT]")
     glyph_first.add_argument("nickname")
     glyph_first.add_argument("user_id")
     glyph_first.add_argument("sub_id")
+    glyph_first.add_argument("week", type=int, help="id of the week to generate for")
     glyph_first.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    glyph_second = subcommands.add_parser("glyph_second", help="glyph_second <NICKNAME> <USER_ID> <SUB_ID> [-size_percentage PERCENT]")
+    glyph_second = subcommands.add_parser("glyph_second", help="glyph_second <NICKNAME> <USER_ID> <SUB_ID> <WEEK> [-size_percentage PERCENT]")
     glyph_second.add_argument("nickname")
     glyph_second.add_argument("user_id")
     glyph_second.add_argument("sub_id")
+    glyph_second.add_argument("week", type=int, help="id of the week to generate for")
     glyph_second.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    glyph_third = subcommands.add_parser("glyph_third", help="glyph_third <NICKNAME> <USER_ID> <SUB_ID> [-size_percentage PERCENT]")
+    glyph_third = subcommands.add_parser("glyph_third", help="glyph_third <NICKNAME> <USER_ID> <SUB_ID> <WEEK> [-size_percentage PERCENT]")
     glyph_third.add_argument("nickname")
     glyph_third.add_argument("user_id")
     glyph_third.add_argument("sub_id")
+    glyph_third.add_argument("week", type=int, help="id of the week to generate for")
     glyph_third.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    ambigram_first = subcommands.add_parser("ambigram_first", help="ambigram_first <NICKNAME> <USER_ID> <SUB_ID> [-size_percentage PERCENT]")
+    ambigram_first = subcommands.add_parser("ambigram_first", help="ambigram_first <NICKNAME> <USER_ID> <SUB_ID> <WEEK> [-size_percentage PERCENT]")
     ambigram_first.add_argument("nickname")
     ambigram_first.add_argument("user_id")
     ambigram_first.add_argument("sub_id")
+    ambigram_first.add_argument("week", type=int, help="id of the week to generate for")
     ambigram_first.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    ambigram_second = subcommands.add_parser("ambigram_second", help="ambigram_second <NICKNAME> <USER_ID> <SUB_ID> [-size_percentage PERCENT]")
+    ambigram_second = subcommands.add_parser("ambigram_second", help="ambigram_second <NICKNAME> <USER_ID> <SUB_ID> <WEEK> [-size_percentage PERCENT]")
     ambigram_second.add_argument("nickname")
     ambigram_second.add_argument("user_id")
     ambigram_second.add_argument("sub_id")
+    ambigram_second.add_argument("week", type=int, help="id of the week to generate for")
     ambigram_second.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    ambigram_third = subcommands.add_parser("ambigram_third", help="ambigram_third <NICKNAME> <USER_ID> <SUB_ID> [-size_percentage PERCENT]")
+    ambigram_third = subcommands.add_parser("ambigram_third", help="ambigram_third <NICKNAME> <USER_ID> <SUB_ID> <WEEK> [-size_percentage PERCENT]")
     ambigram_third.add_argument("nickname")
     ambigram_third.add_argument("user_id")
     ambigram_third.add_argument("sub_id")
+    ambigram_third.add_argument("week", type=int, help="id of the week to generate for")
     ambigram_third.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
     glyph_suggestions = subcommands.add_parser("glyph_suggestions", help="glyph_suggestions [--cols N] <GLYPH1> <GLYPH2> [...]")
     glyph_suggestions.add_argument("glyphs", nargs='*')
@@ -163,11 +173,13 @@ fr"""
 """)
         ####################GLYPH_POLL########################
         if args.subcommand == "glyph_poll":
-            subs = sorted(os.listdir("images/thisweek/glyph"))
+            dirr = f"images/glyph/{args.week}"
+            path = f"{dirr}/{sub.split('.')[0]}"
+            subs = sorted(list(filter(os.path.isfile, os.listdir(dirr))))
             buf = ""
             i = 1
             for sub in subs:
-                buf += fr"""\setimage{{{i}}}{{{"images/thisweek/glyph/" + sub.split(".")[0]}}}
+                buf += fr"""\setimage{{{i}}}{{{path}}}
 """
                 i += 1
             f.writelines(
@@ -182,11 +194,13 @@ fr"""
 """)
         ####################AMBIGRAM_POLL#####################
         if args.subcommand == "ambigram_poll":
-            subs = sorted(os.listdir("images/thisweek/ambi"))
+            dirr = f"images/glyph/{args.week}"
+            path = f"{dirr}/{sub.split('.')[0]}"
+            subs = sorted(list(filter(os.path.isfile, os.listdir(dirr))))
             buf = ""
             i = 1
             for sub in subs:
-                buf += fr"""\setimage{{{i}}}{{{"images/thisweek/ambi/" + sub.split(".")[0]}}}
+                buf += fr"""\setimage{{{i}}}{{{path}}}
 """
                 i += 1
             f.writelines(
@@ -207,6 +221,7 @@ fr"""
 \def\GlyphWinnerFirst{{{match_and_format_font(latex_escape(args.nickname), fonts, scripts, args.size_percentage, 40, style, args.verbose)}}}
 \def\GlyphWinnerFirstID{{{latex_escape(args.user_id)}}}
 \def\GlyphWinnerFirstSubID{{{latex_escape(args.sub_id)}}}
+\def\WeekNum{{{args.week}}}
 \begin{{document}}
 \GlyphChallengeFirst
 \end{{document}}
@@ -218,6 +233,7 @@ fr"""
 \def\GlyphWinnerSecond{{{match_and_format_font(latex_escape(args.nickname), fonts, scripts, args.size_percentage, 40, style, args.verbose)}}}
 \def\GlyphWinnerSecondID{{{latex_escape(args.user_id)}}}
 \def\GlyphWinnerSecondSubID{{{latex_escape(args.sub_id)}}}
+\def\WeekNum{{{args.week}}}
 \begin{{document}}
 \GlyphChallengeSecond
 \end{{document}}
@@ -229,6 +245,7 @@ fr"""
 \def\GlyphWinnerThird{{{match_and_format_font(latex_escape(args.nickname), fonts, scripts, args.size_percentage, 40, style, args.verbose)}}}
 \def\GlyphWinnerThirdID{{{latex_escape(args.user_id)}}}
 \def\GlyphWinnerThirdSubID{{{latex_escape(args.sub_id)}}}
+\def\WeekNum{{{args.week}}}
 \begin{{document}}
 \GlyphChallengeThird
 \end{{document}}
@@ -241,6 +258,7 @@ fr"""
 \def\AmbiWinnerFirst{{{match_and_format_font(latex_escape(args.nickname), fonts, scripts, args.size_percentage, 40, style, args.verbose)}}}
 \def\AmbiWinnerFirstID{{{latex_escape(args.user_id)}}}
 \def\AmbiWinnerFirstSubID{{{latex_escape(args.sub_id)}}}
+\def\WeekNum{{{args.week}}}
 \begin{{document}}
 \AmbigramChallengeFirst
 \end{{document}}
@@ -252,6 +270,7 @@ fr"""
 \def\AmbiWinnerSecond{{{match_and_format_font(latex_escape(args.nickname), fonts, scripts, args.size_percentage, 40, style, args.verbose)}}}
 \def\AmbiWinnerSecondID{{{latex_escape(args.user_id)}}}
 \def\AmbiWinnerSecondSubID{{{latex_escape(args.sub_id)}}}
+\def\WeekNum{{{args.week}}}
 \begin{{document}}
 \AmbigramChallengeSecond
 \end{{document}}
@@ -263,6 +282,7 @@ fr"""
 \def\AmbiWinnerThird{{{match_and_format_font(latex_escape(args.nickname), fonts, scripts, args.size_percentage, 40, style, args.verbose)}}}
 \def\AmbiWinnerThirdID{{{latex_escape(args.user_id)}}}
 \def\AmbiWinnerThirdSubID{{{latex_escape(args.sub_id)}}}
+\def\WeekNum{{{args.week}}}
 \begin{{document}}
 \AmbigramChallengeThird
 \end{{document}}
