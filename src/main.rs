@@ -1,19 +1,23 @@
 #![allow(unused)]
+#![allow(deprecated)]
 
-mod server_data;
-mod core;
 mod commands;
-mod sql;
+mod core;
 mod events;
 mod file;
+mod scheduling;
+mod server_data;
+mod sql;
 
-use std::sync::Arc;
-use poise::serenity_prelude as ser;
-use clap::Parser;
 use crate::commands::{nickname, profile, queue, update};
 use crate::core::{log_command, terminate};
 use crate::events::GlyfiEvents;
+use crate::scheduling::schedule_loop;
 use crate::server_data::SERVER_ID;
+use clap::Parser;
+use poise::serenity_prelude as ser;
+use std::sync::Arc;
+use tokio::join;
 
 /// Global context. Ugly, but this is the best way I can think
 /// of to support graceful shutdown on Ctrl+C etc.
@@ -29,6 +33,7 @@ pub struct Data;
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 type Res = Result<(), Error>;
+type ResT<T> = Result<T, Error>;
 
 /// Clopts.
 #[derive(Parser, Debug)]
@@ -41,7 +46,9 @@ struct Args {
 
 /// Only to be called by [`terminate()`].
 pub async unsafe fn __glyfi_terminate_bot() {
-    if let Some(fw) = __GLYFI_FRAMEWORK.as_ref() { fw.shutdown_all().await; }
+    if let Some(fw) = __GLYFI_FRAMEWORK.as_ref() {
+        fw.shutdown_all().await;
+    }
 }
 
 /// This is called from a thread that is not part of the runtime.
@@ -52,13 +59,12 @@ unsafe fn __glyfi_ctrlc_impl() {
 }
 
 /// Register bot commands.
-async fn register_impl(http: impl AsRef<ser::Http>, framework: &poise::Framework<Data, Error>) -> Res {
+async fn register_impl(
+    http: impl AsRef<ser::Http>,
+    framework: &poise::Framework<Data, Error>,
+) -> Res {
     info_sync!("Registering commands...");
-    poise::builtins::register_in_guild(
-        http,
-        &framework.options().commands,
-        SERVER_ID,
-    ).await?;
+    poise::builtins::register_in_guild(http, &framework.options().commands, SERVER_ID).await?;
     info_sync!("Commands registered.");
     Ok(())
 }
@@ -74,16 +80,21 @@ async fn main() {
     }));
 
     // Save runtime.
-    unsafe { __GLYFI_RUNTIME = Some(tokio::runtime::Handle::current()); }
+    unsafe {
+        __GLYFI_RUNTIME = Some(tokio::runtime::Handle::current());
+    }
 
     // Register the SIGINT handler.
     //
     // Do this *after* saving the runtime as the handler will
     // attempt to enter the runtime.
-    ctrlc::set_handler(|| unsafe { __glyfi_ctrlc_impl() }).expect("Failed to register SIGINT handler");
+    ctrlc::set_handler(|| unsafe { __glyfi_ctrlc_impl() })
+        .expect("Failed to register SIGINT handler");
 
     // Initialise the database.
-    unsafe { sql::__glyfi_init_db().await; }
+    unsafe {
+        sql::__glyfi_init_db().await;
+    }
 
     let args = Args::parse();
     let fw = poise::Framework::builder()
@@ -113,12 +124,12 @@ async fn main() {
         })
         .build();
 
-    ser::ClientBuilder::new(server_data::DISCORD_BOT_TOKEN, ser::GatewayIntents::all())
-        .framework(fw)
-        .event_handler(GlyfiEvents)
-        .await
-        .unwrap()
-        .start()
-        .await
-        .unwrap();
+    let mut client =
+        ser::ClientBuilder::new(server_data::DISCORD_BOT_TOKEN, ser::GatewayIntents::all())
+            .framework(fw)
+            .event_handler(GlyfiEvents)
+            .await
+            .unwrap();
+    let scheduler = schedule_loop();
+    join!(scheduler, client.start());
 }

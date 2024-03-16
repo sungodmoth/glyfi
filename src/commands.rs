@@ -1,12 +1,11 @@
-use chrono::naive;
 use poise::builtins::register_application_commands;
 use poise::{ChoiceParameter, CreateReply};
-use poise::serenity_prelude::{ButtonStyle, CreateActionRow, CreateAttachment, CreateButton, CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter};
-use crate::{Context, Error, info, Res, sql};
-use crate::core::{create_embed, DEFAULT_EMBED_COLOUR, file_mtime, handle_command_error};
-use crate::sql::{edit_prompt, get_prompt, get_prompt_id, swap_prompts, Challenge, PromptData, PromptOption};
+use poise::serenity_prelude::{CreateAttachment, CreateEmbed, CreateEmbedAuthor};
+use crate::{info, sql, Context, Res, ResT};
+use crate::core::{create_embed, file_mtime, handle_command_error};
+use crate::sql::{get_current_week, edit_prompt, get_prompt, swap_prompts, Challenge, PromptData};
 
-async fn generate_challenge_image(prompt_data: &PromptData) -> Result<String, Error> {
+async fn generate_challenge_image(prompt_data: &PromptData) -> ResT<String> {
     let name = match prompt_data.challenge {
         Challenge::Glyph => "glyph_announcement",
         Challenge::Ambigram => "ambigram_announcement",
@@ -16,6 +15,7 @@ async fn generate_challenge_image(prompt_data: &PromptData) -> Result<String, Er
     let mut command = tokio::process::Command::new("./generate.py");
     command.arg(name);
     command.arg(String::from(&prompt_data.prompt).replace("\\n", "\\\\"));
+    command.arg(get_current_week(prompt_data.challenge).await?.to_string());
     if let Some(percentage) = prompt_data.size_percentage {
         command.arg("--size_percentage");
         command.arg(percentage.to_string());
@@ -132,7 +132,7 @@ pub async fn profile(ctx: Context<'_>) -> Res {
 #[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error",
  subcommands("queue_add", "queue_list", "queue_remove", "queue_preview", "queue_edit", "queue_swap", "queue_move"), 
  default_member_permissions = "ADMINISTRATOR")]
-pub async fn queue(ctx: Context<'_>) -> Res { unreachable!(); }
+pub async fn queue(_ctx: Context<'_>) -> Res { unreachable!(); }
 
 /// Add a new prompt to the given queue.
 #[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", rename = "add", default_member_permissions = "ADMINISTRATOR")]
@@ -140,19 +140,25 @@ pub async fn queue_add(
     ctx: Context<'_>,
     #[description = "Which challenge to set the prompt for"] challenge: Challenge,
     #[description = "The prompt for the challenge"] prompt: String,
-    #[description = "Percentage modifying the size of the prompt"] size_percentage: Option<i16>
+    #[description = "Percentage modifying the size of the prompt - defaults to 100 (normal size)"] size_percentage: Option<u16>,
+    #[description = "Duration of the challenge measured in weeks - defaults to 1"] custom_duration: Option<u16>,
+    #[description = "Whether the week is special - defaults to false"] is_special: Option<bool>,
+    #[description = "Any extra text to accompany the announcement of this glyph"] extra_announcement_text: Option<String>
 ) -> Res {
-    let prompt_data = PromptData { challenge, prompt, size_percentage };
+    if let Some(0) = size_percentage { return Err("Cannot set size_percentage to 0.".into()); }
+    if let Some(0) = custom_duration { return Err("Cannot set custom_duration to 0.".into()); }
+    let prompt_data = PromptData { challenge, prompt, size_percentage: size_percentage.filter(|x| x != &100), 
+        custom_duration, is_special: is_special.filter(|x| x == &true), extra_announcement_text };
 
     // Save prompt.
-    let id = sql::add_prompt(&prompt_data).await?;
+    sql::add_prompt(&prompt_data).await?;
 
     // Generate image based on new prompt.
     ctx.defer_ephemeral().await?;
     let path = generate_challenge_image(&prompt_data).await?;
 
     // Get mtime. This is just a little sanity check.
-    let mtime = file_mtime(&path)?;
+    file_mtime(&path)?;
 
     // Reply with the image.
     ctx.send(CreateReply::default()
@@ -168,19 +174,20 @@ pub async fn queue_edit(
     ctx: Context<'_>,
     #[description = "Which challenge to edit a prompt for"] challenge: Challenge,
     #[description = "Position in the queue of the prompt to edit"] position: usize,
-    #[description = "Property to modify"] property: PromptOption,
-    #[description = "Value to set property to"] value: String
+    #[description = "New size modifier of the prompt"] size_percentage: Option<u16>,
+    #[description = "New duration of the challenge in weeks"] custom_duration: Option<u16>,
+    #[description = "Whether or not the week should be special"] is_special: Option<bool>,
+    #[description = "Any extra text to accompany the announcement of this glyph"] extra_announcement_text: Option<String>
 ) -> Res {
     let (id, mut prompt_data) = get_prompt(challenge, position).await?;
-    match property {
-        PromptOption::Prompt => {
-            prompt_data.prompt = value;
-        },
-        PromptOption::SizePercentage => {
-            let percentage = value.parse::<i16>().map_err(|_| "cannot set size_percentage to a non-integer value")?;
-            prompt_data.size_percentage = Some(percentage);
-        }
-    }
+    // whether or not this operation necessitates showing the user the new image because it has changed
+    let mut changed = false;
+    if let Some(v) = size_percentage { if v == 0 { return Err("Cannot set size_percentage to 0.".into()) } else {
+        prompt_data.size_percentage = size_percentage.filter(|x| x != &100); changed = true; } }
+    if let Some(v) = custom_duration { if v == 0 { return Err("Cannot set custom_duration to 0.".into()) } else {
+        prompt_data.custom_duration = custom_duration; changed = true; } }
+    if let Some(_) = is_special { prompt_data.is_special = is_special.filter(|x| x == &true); }
+    if let Some(_) = &extra_announcement_text { prompt_data.extra_announcement_text = extra_announcement_text; }
 
     info!("Modifying prompt {}:{} to {:?} in db...", challenge.name(), position, prompt_data);
     let successful = edit_prompt(id, &prompt_data).await?;
@@ -190,18 +197,24 @@ pub async fn queue_edit(
         return Ok(())
     }
 
-    // Generate image based on modified prompt.
-    ctx.defer_ephemeral().await?;
-    let path = generate_challenge_image(&prompt_data).await?;
+    if changed {
+        // Generate image based on modified prompt.
+        ctx.defer_ephemeral().await?;
+        let path = generate_challenge_image(&prompt_data).await?;
 
-    // Get mtime. This is just a little sanity check.
-    let mtime = file_mtime(&path)?;
+        // Get mtime. This is just a little sanity check.
+        file_mtime(&path)?;
 
-    // Reply with the image.
-    ctx.send(CreateReply::default()
-        .content("Successfully modified entry!")
-        .attachment(CreateAttachment::path(path).await?)
-    ).await?;
+        // Reply with the image.
+        ctx.send(CreateReply::default()
+            .content("Successfully modified entry!")
+            .attachment(CreateAttachment::path(path).await?)
+        ).await?;
+    }
+    else {
+        ctx.send(CreateReply::default()
+            .content("Successfully modified entry!")).await?;
+    }
     Ok(())
 }
 
@@ -260,22 +273,20 @@ pub async fn queue_list(
     #[description = "Which challenge to show the queue for"] challenge: Challenge,
 ) -> Res {
     // Get the queue.
-    let queue = sql::get_prompts(challenge)
-        .await?
-        .iter().enumerate()
-        .map(|(i, t)| 
-            if let Some(percentage) = t.1.size_percentage {
-                format!("- **{}:** {}, {}%", i+1, t.1.prompt, percentage) }
-            else {
-                format!("- **{}:** {}", i+1, t.1.prompt) 
-        } )
-        .collect::<Vec<_>>()
-        .join("\n");
+    let queue = sql::get_prompts(challenge).await?;
 
     // Create embed.
-    let embed = create_embed(&ctx)
+    let mut embed = create_embed(&ctx)
         .author(CreateEmbedAuthor::new(format!("Queue for {} Challenge", challenge.name())))
-        .description(format!("**n:** prompt, size_percentage\n{queue}"));
+        .description("Listed properties: size_percentage, custom_duration, is_special, extra_announcement_text.\nIf a property has its default value, it is not listed.");
+    for prompt in queue.into_iter().map(|(_, p)| p).enumerate() {
+        embed = embed.field(format!("**{}**: {}", prompt.0 + 1, prompt.1.prompt),[
+            prompt.1.size_percentage.map(|x| format!("> size_percentage: {x}%")),
+            prompt.1.custom_duration.map(|x| format!("> custom_duration: {x} weeks")),
+            prompt.1.is_special.map(|x| format!("> is_special: {x}")),
+            prompt.1.extra_announcement_text.map(|x| format!("> extra_announcement_text: {x}"))
+        ].into_iter().flatten().collect::<Vec<String>>().join("\n"), false);
+    }
 
     // Send it.
     ctx.send(CreateReply::default().embed(embed)).await?;
@@ -314,6 +325,20 @@ pub async fn queue_preview(
     Ok(())
 }
 
+// /// Marks the current week as special.
+// #[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", rename = "mark_special", default_member_permissions = "ADMINISTRATOR")]
+// pub async fn week_mark_special(
+//     ctx: Context<'_>,
+//     #[description = "The challenge to mark next week as special for."] challenge: Challenge,
+// ) -> Res {
+//     ctx.defer_ephemeral().await?;
+//     ctx.send(CreateReply::default()
+//         .attachment(CreateAttachment::path(path).await?)
+//     ).await?;
+//     Ok(())
+// }
+
+
 /// Update bot commands.
 #[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", default_member_permissions = "ADMINISTRATOR")]
 pub async fn update(ctx: Context<'_>) -> Res {
@@ -321,7 +346,7 @@ pub async fn update(ctx: Context<'_>) -> Res {
     Ok(())
 }
 
-/// Show stats for a week.
+///// Show stats for a week.
 //
 // Info shown are: That week’s glyph/ambigram, message link to
 // that week’s announcement post, How many submissions there were
@@ -329,18 +354,18 @@ pub async fn update(ctx: Context<'_>) -> Res {
 // message link to that week’s submissions post, top 3 winner names,
 // message link to that week’s hall of fame, & the announcement image
 // used for that week.
-#[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error")]
-pub async fn weekinfo(
-    ctx: Context<'_>,
-    #[description = "Which challenge to get stats for"] challenge: Challenge,
-    #[description = "The week whose stats to retrieve"] week: Option<u64>,
-) -> Res {
-    /*let info = sql::weekinfo(week).await?;
-    let mut embed = create_embed(&ctx);
-    embed = embed.author(CreateEmbedAuthor::new(format!("Stats for Week {}", info.week)));
-    embed = embed.field("Submissions", format!("{}", info.submissions), true);*/
-    todo!();
+// #[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error")]
+// pub async fn week_info(
+//     ctx: Context<'_>,
+//     #[description = "Which challenge to get stats for"] challenge: Challenge,
+//     #[description = "The week whose stats to retrieve"] week: Option<u64>,
+// ) -> Res {
+//     let info = sql::weekinfo(week).await?;
+//     let mut embed = create_embed(&ctx);
+//     embed = embed.author(CreateEmbedAuthor::new(format!("Stats for Week {}", info.week)));
+//     embed = embed.field("Submissions", format!("{}", info.submissions), true);
+//     todo!();
 
 
-    Ok(())
-}
+//     Ok(())
+// }

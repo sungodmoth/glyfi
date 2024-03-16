@@ -1,9 +1,11 @@
-use std::str::FromStr;
+use crate::server_data::{AMBI_INTERVAL, GLYPH_INTERVAL};
+use crate::{info_sync, Error, Res, ResT};
+use chrono::{Duration, NaiveDateTime};
 use const_format::formatcp;
 use poise::serenity_prelude::{Member, MessageId, UserId};
 use sqlx::migrate::MigrateDatabase;
 use sqlx::{FromRow, Sqlite, SqlitePool};
-use crate::{Error, info_sync, Res};
+use std::str::FromStr;
 
 pub const DB_PATH: &str = "glyfi.db";
 
@@ -12,17 +14,10 @@ pub const DB_PATH: &str = "glyfi.db";
 pub struct PromptData {
     pub challenge: Challenge,
     pub prompt: String,
-    pub size_percentage: Option<i16>
-}
-
-/// (Exists so that it can be a choice parameter in slash commands)
-#[derive(Copy, Clone, Debug, PartialEq, poise::ChoiceParameter)]
-#[repr(u8)]
-pub enum PromptOption {
-    #[name="size_percentage"]
-    SizePercentage,
-    #[name="prompt"]
-    Prompt
+    pub size_percentage: Option<u16>,
+    pub custom_duration: Option<u16>,
+    pub is_special: Option<bool>,
+    pub extra_announcement_text: Option<String>,
 }
 
 /// What challenge a submission belongs to.
@@ -52,6 +47,12 @@ impl Challenge {
 
         return format!("./generation/{}.png", name);
     }
+    pub fn default_duration(self) -> Duration {
+        match self {
+            Challenge::Glyph => GLYPH_INTERVAL,
+            Challenge::Ambigram => AMBI_INTERVAL,
+        }
+    }
 }
 
 impl FromStr for Challenge {
@@ -60,7 +61,7 @@ impl FromStr for Challenge {
         match s {
             "0" => Ok(Challenge::Glyph),
             "1" => Ok(Challenge::Ambigram),
-            id => Err(format!("Unknown challenge ID '{:?}'", id).into())
+            id => Err(format!("Unknown challenge ID '{:?}'", id).into()),
         }
     }
 }
@@ -98,18 +99,6 @@ impl From<i64> for Challenge {
 ///   unless that week was special.
 ///
 /// - Post the top three from the week before the last.
-#[derive(Copy, Clone, Debug)]
-#[repr(u8)]
-pub enum Week {
-    Regular = 0,
-    Special = 1,
-}
-
-impl Week {
-    pub fn raw(self) -> u8 {
-        self as _
-    }
-}
 
 /// Profile for a user.
 #[derive(Clone, Debug)]
@@ -137,11 +126,14 @@ pub struct UserProfileData {
 
 #[derive(Clone, Debug, FromRow)]
 pub struct WeekInfo {
+    pub challenge: Challenge,
     pub week: i64,
-    pub glyph_challenge_kind: Option<i8>,
-    pub ambigram_challenge_kind: Option<i8>,
-    pub glyph_prompt: Option<String>,
-    pub ambigram_prompt: Option<String>,
+    pub prompt: String,
+    pub target_start_time: NaiveDateTime,
+    pub target_end_time: NaiveDateTime,
+    pub actual_start_time: NaiveDateTime,
+    pub actual_end_time: NaiveDateTime,
+    pub is_special: bool,
 }
 
 static mut __GLYFI_DB_POOL: Option<SqlitePool> = None;
@@ -159,7 +151,9 @@ pub async fn truncate_wal() {
 
 /// Only intended to be called by [`terminate()`].
 pub async unsafe fn __glyfi_fini_db() {
-    if let Some(pool) = __GLYFI_DB_POOL.as_ref() { pool.close().await; }
+    if let Some(pool) = __GLYFI_DB_POOL.as_ref() {
+        pool.close().await;
+    }
 }
 
 /// Only intended to be called by main().
@@ -174,7 +168,8 @@ pub async unsafe fn __glyfi_init_db() {
     __GLYFI_DB_POOL = Some(SqlitePool::connect(DB_PATH).await.unwrap());
 
     // Create submissions table.
-    sqlx::query(r#"
+    sqlx::query(
+        r#"
         CREATE TABLE IF NOT EXISTS submissions (
             message INTEGER, -- Message ID of the submission.
             week INTEGER NOT NULL, -- This is just an integer.
@@ -185,10 +180,15 @@ pub async unsafe fn __glyfi_init_db() {
             votes INTEGER NOT NULL DEFAULT 0, -- Number of votes.
             PRIMARY KEY (message, week, challenge)
         ) STRICT;
-    "#).execute(pool()).await.unwrap();
+    "#,
+    )
+    .execute(pool())
+    .await
+    .unwrap();
 
     // Cached user profile data (excludes current week, obviously).
-    sqlx::query(r#"
+    sqlx::query(
+        r#"
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY, -- Discord user ID.
             nickname TEXT, -- Nickname.
@@ -207,108 +207,118 @@ pub async unsafe fn __glyfi_init_db() {
             highest_ranking_glyphs INTEGER NOT NULL DEFAULT 0,
             highest_ranking_ambigrams INTEGER NOT NULL DEFAULT 0
         ) STRICT;
-    "#).execute(pool()).await.unwrap();
+    "#,
+    )
+    .execute(pool())
+    .await
+    .unwrap();
 
     // The current week. This is a table with a single entry.
-    sqlx::query(r#"
+    sqlx::query(
+        r#"
         CREATE TABLE IF NOT EXISTS current_week (
+            challenge INTEGER NOT NULL PRIMARY KEY,
             week INTEGER NOT NULL
         ) STRICT;
-    "#).execute(pool()).await.unwrap();
+    "#,
+    )
+    .execute(pool())
+    .await
+    .unwrap();
 
-    // Prevent inserting additional weeks.
-    sqlx::query(r#"
-        CREATE TRIGGER IF NOT EXISTS current_week_insertion
-        BEFORE INSERT ON current_week
-        WHEN (SELECT COUNT(*) FROM current_week) > 0
-        BEGIN
-            SELECT RAISE(ABORT, "current_week table must not contain more than one entry!");
-        END;
-    "#).execute(pool()).await.unwrap();
-
-    // The user is expected to set this manually, but ensure it exists. This
-    // is allowed to fail due to the trigger above.
-    let _ = sqlx::query("INSERT OR IGNORE INTO current_week (week) VALUES (0)").execute(pool()).await;
+    let _ = sqlx::query("INSERT OR IGNORE INTO current_week (challenge, week) VALUES (0, 0)")
+        .execute(pool())
+        .await;
+    let _ = sqlx::query("INSERT OR IGNORE INTO current_week (challenge, week) VALUES (1, 0)")
+        .execute(pool())
+        .await;
 
     // Table that stores what weeks are/were regular or special.
-    sqlx::query(r#"
+    sqlx::query(
+        r#"
         CREATE TABLE IF NOT EXISTS weeks (
-            week INTEGER PRIMARY KEY, -- Week number.
-
-            -- See Week enum.
-            glyph_challenge_kind INTEGER,
-            ambigram_challenge_kind INTEGER,
-
-            -- Prompts.
-            glyph_prompt TEXT,
-            ambigram_prompt TEXT,
-
-            -- Message ID of the announcement message.
-            glyph_announcement_message INTEGER,
-            ambigram_announcement_message INTEGER,
-
-            -- Message ID of the submissions panel.
-            glyph_panel_message INTEGER,
-            ambigram_panel_message INTEGER,
-
-            -- Message ID of the first hall of fame message.
-            glyph_hof_message INTEGER,
-            ambigram_hof_message INTEGER
+            week INTEGER,
+            challenge INTEGER NOT NULL,
+            prompt TEXT NOT NULL,
+            target_start_time INTEGER,
+            target_end_time INTEGER,
+            actual_start_time INTEGER,
+            actual_end_time INTEGER,
+            is_special INTEGER,
+            PRIMARY KEY (week, challenge)
         ) STRICT;
-    "#).execute(pool()).await.unwrap();
+    "#,
+    )
+    .execute(pool())
+    .await
+    .unwrap();
 
     // Table that stores future prompts.
-    sqlx::query(r#"
+    sqlx::query(
+        r#"
         CREATE TABLE IF NOT EXISTS prompts (
             challenge INTEGER NOT NULL,
             prompt TEXT NOT NULL,
-            size_percentage INTEGER
+            size_percentage INTEGER,
+            custom_duration INTEGER,
+            is_special INTEGER,
+            extra_announcement_text TEXT
         ) STRICT;
-        "#).execute(pool()).await.unwrap();
-    }
+        "#,
+    )
+    .execute(pool())
+    .await
+    .unwrap();
+}
 
-    /////////////////////////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////
-    
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
 
-    /// Add a user to the database.
-    pub async fn register_user(member: Member) -> Res {
-    sqlx::query(r#"
+/// Add a user to the database.
+pub async fn register_user(member: Member) -> Res {
+    sqlx::query(
+        r#"
     INSERT INTO users (id, nickname) VALUES (?, ?);
-        "#)
-        .bind(member.user.id.get() as i64)
-        .bind(member.nick.unwrap_or(member.user.name))
-        .execute(pool())
-        .await
-        .map(|_| ())
-        .map_err(|e| e.into())
-    }
+        "#,
+    )
+    .bind(member.user.id.get() as i64)
+    .bind(member.nick.unwrap_or(member.user.name))
+    .execute(pool())
+    .await
+    .map(|_| ())
+    .map_err(|e| e.into())
+}
 
-    /// Checks whether user is in the database.
-    pub async fn check_user(member: &Member) -> Result<bool, Error> {
-        sqlx::query(r#"SELECT id, nickname FROM users WHERE id = ? LIMIT 1"#)
+/// Checks whether user is in the database.
+pub async fn check_user(member: &Member) -> ResT<bool> {
+    sqlx::query(r#"SELECT id, nickname FROM users WHERE id = ? LIMIT 1"#)
         .bind(member.user.id.get() as i64)
         .fetch_optional(pool())
         .await
         .map(|x| x.is_some())
         .map_err(|e| e.into())
-    }
+}
 
-    /// Checks whether submission is in the database.
-    pub async fn check_submission(message_id: MessageId) -> Result<bool, Error> {
-        sqlx::query(r#"SELECT message FROM submissions WHERE message = ? LIMIT 1"#)
+/// Checks whether submission is in the database.
+pub async fn check_submission(message_id: MessageId) -> ResT<bool> {
+    sqlx::query(r#"SELECT message FROM submissions WHERE message = ? LIMIT 1"#)
         .bind(message_id.get() as i64)
         .fetch_optional(pool())
         .await
         .map(|x| x.is_some())
         .map_err(|e| e.into())
-    }
+}
 
-    /// Add a submission to the database.
-    pub async fn register_submission(message: MessageId, challenge: Challenge, 
-        author: UserId, link: &str, week_num: i64
-    ) -> Res {
-    sqlx::query(r#"
+/// Add a submission to the database.
+pub async fn register_submission(
+    message: MessageId,
+    challenge: Challenge,
+    author: UserId,
+    link: &str,
+    week_num: i64,
+) -> Res {
+    sqlx::query(
+        r#"
     INSERT INTO submissions (
         message,
         week,
@@ -316,44 +326,48 @@ pub async unsafe fn __glyfi_init_db() {
             author,
             link
         ) VALUES (?, ?, ?, ?, ?);
-        "#)
-        .bind(message.get() as i64)
-        .bind(week_num)
-        .bind(challenge as i64)
-        .bind(author.get() as i64)
-        .bind(link)
-        .execute(pool())
-        .await
-        .map(|_| ())
-        .map_err(|e| e.into())
-    }
-    /// Remove a submission from the database.
-    pub async fn deregister_submission(message: MessageId, challenge: Challenge, week_num: i64) -> Res {
-        sqlx::query(r#"
+        "#,
+    )
+    .bind(message.get() as i64)
+    .bind(week_num)
+    .bind(challenge as i64)
+    .bind(author.get() as i64)
+    .bind(link)
+    .execute(pool())
+    .await
+    .map(|_| ())
+    .map_err(|e| e.into())
+}
+/// Remove a submission from the database.
+pub async fn deregister_submission(message: MessageId, challenge: Challenge, week_num: i64) -> Res {
+    sqlx::query(
+        r#"
             DELETE FROM submissions
             WHERE message = ?
             AND week = ?
             AND challenge = ?;
-        "#)
-            .bind(message.get() as i64)
-            .bind(week_num)
-            .bind(challenge as i64)
-            .execute(pool())
-            .await
-            .map(|_| ())
-            .map_err(|e| e.into())
-    }
+        "#,
+    )
+    .bind(message.get() as i64)
+    .bind(week_num)
+    .bind(challenge as i64)
+    .execute(pool())
+    .await
+    .map(|_| ())
+    .map_err(|e| e.into())
+}
 
-    /// Get the current week.
-    pub async fn current_week() -> Result<i64, Error> {
-        sqlx::query_scalar("SELECT week FROM current_week LIMIT 1;")
+/// Get the current week.
+pub async fn get_current_week(challenge: Challenge) -> ResT<i64> {
+    sqlx::query_scalar("SELECT week FROM current_week WHERE challenge = ? LIMIT 1;")
+        .bind(challenge.raw() as i64)
         .fetch_one(pool())
         .await
         .map_err(|e| format!("Failed to get current week: {}", e).into())
-    }
-    
-    /// Get profile data for a user.
-    pub async fn get_user_profile(user: UserId) -> Result<UserProfileData, Error> {
+}
+
+/// Get profile data for a user.
+pub async fn get_user_profile(user: UserId) -> ResT<UserProfileData> {
     #[derive(Default, FromRow)]
     pub struct UserProfileDataFirst {
         pub nickname: Option<String>,
@@ -373,7 +387,8 @@ pub async unsafe fn __glyfi_init_db() {
         pub ambigrams_submissions: i64,
     }
 
-    let first: UserProfileDataFirst = sqlx::query_as(r#"
+    let first: UserProfileDataFirst = sqlx::query_as(
+        r#"
         SELECT
             nickname,
             glyphs_first, glyphs_second, glyphs_third,
@@ -381,26 +396,31 @@ pub async unsafe fn __glyfi_init_db() {
             highest_ranking_glyphs, highest_ranking_ambigrams
         FROM users
         WHERE id = ?;
-    "#)
-        .bind(user.get() as i64)
-        .fetch_optional(pool())
-        .await
-        .map_err(|e| format!("Failed to get user profile data: {}", e))?
-        .unwrap_or_default();
+    "#,
+    )
+    .bind(user.get() as i64)
+    .fetch_optional(pool())
+    .await
+    .map_err(|e| format!("Failed to get user profile data: {}", e))?
+    .unwrap_or_default();
 
-    let second: UserProfileDataSecond = sqlx::query_as(formatcp!(r#"
+    let second: UserProfileDataSecond = sqlx::query_as(formatcp!(
+        r#"
         SELECT
             SUM(IIF(challenge = {}, 1, 0)) as glyphs_submissions,
             SUM(IIF(challenge = {}, 1, 0)) as ambigrams_submissions
         FROM submissions
         WHERE author = ?
         GROUP BY author;
-    "#, Challenge::Glyph as i64, Challenge::Ambigram as i64))
-        .bind(user.get() as i64)
-        .fetch_optional(pool())
-        .await
-        .map_err(|e| format!("Failed to get user profile data: {}", e))?
-        .unwrap_or_default();
+    "#,
+        Challenge::Glyph as i64,
+        Challenge::Ambigram as i64
+    ))
+    .bind(user.get() as i64)
+    .fetch_optional(pool())
+    .await
+    .map_err(|e| format!("Failed to get user profile data: {}", e))?
+    .unwrap_or_default();
 
     Ok(UserProfileData {
         nickname: first.nickname,
@@ -421,42 +441,46 @@ pub async unsafe fn __glyfi_init_db() {
     })
 }
 
-
 /// Set a user’s nickname.
 pub async fn set_nickname(user: UserId, name: &str) -> Res {
-    sqlx::query(r#"
+    sqlx::query(
+        r#"
         INSERT INTO users (id, nickname) VALUES (?1, ?2)
         ON CONFLICT (id) DO UPDATE SET nickname = ?2;
-    "#)
-        .bind(user.get() as i64)
-        .bind(name)
-        .execute(pool())
-        .await
-        .map(|_| ())
-        .map_err(|e| e.into())
+    "#,
+    )
+    .bind(user.get() as i64)
+    .bind(name)
+    .execute(pool())
+    .await
+    .map(|_| ())
+    .map_err(|e| e.into())
 }
 
 /// Set the prompt for a challenge and week.
 /// Returns the id of the prompt in the DB.
-pub async fn add_prompt(prompt_data: &PromptData) -> Result<i64, Error> {
-    sqlx::query_scalar("INSERT INTO prompts (challenge, prompt, size_percentage) VALUES (?, ?, ?) RETURNING rowid")
+pub async fn add_prompt(prompt_data: &PromptData) -> ResT<i64> {
+    sqlx::query_scalar("INSERT INTO prompts (challenge, prompt, size_percentage, custom_duration, is_special, extra_announcement_text) VALUES (?, ?, ?, ?, ?, ?) RETURNING rowid")
         .bind(prompt_data.challenge.raw())
         .bind(&prompt_data.prompt)
-        .bind(prompt_data.size_percentage)
+        .bind(prompt_data.size_percentage.map(|x| x as i32))
+        .bind(prompt_data.custom_duration.map(|x| x as i32))
+        .bind(prompt_data.is_special)
+        .bind(&prompt_data.extra_announcement_text)
         .fetch_one(pool())
         .await
         .map_err(|e| e.into())
 }
 
 /// Swaps two prompts within a given queue. Returns whether the operation was successful
-pub async fn swap_prompts(challenge: Challenge, pos1: usize, pos2: usize) -> Result<bool, Error> {
+pub async fn swap_prompts(challenge: Challenge, pos1: usize, pos2: usize) -> ResT<bool> {
     let (id1, prompt_data1) = get_prompt(challenge, pos1).await?;
     let (id2, prompt_data2) = get_prompt(challenge, pos2).await?;
     Ok(edit_prompt(id1, &prompt_data2).await? & edit_prompt(id2, &prompt_data1).await?)
 }
 
 /// Delete the nth prompt in a given queue. Returns whether the operation was successful.
-pub async fn delete_prompt(challenge: Challenge, position: usize) -> Result<bool, Error> {
+pub async fn delete_prompt(challenge: Challenge, position: usize) -> ResT<bool> {
     let id = get_prompt_id(challenge, position).await?;
     sqlx::query("DELETE FROM prompts WHERE rowid = ?")
         .bind(id)
@@ -467,11 +491,14 @@ pub async fn delete_prompt(challenge: Challenge, position: usize) -> Result<bool
 }
 
 /// Replaces the prompt with given id with the data specified. Returns whether the operation was successful.
-pub async fn edit_prompt(id: i64, prompt_data: &PromptData) -> Result<bool, Error> {
-    sqlx::query("UPDATE prompts SET challenge = ?, prompt = ?, size_percentage = ? WHERE rowid = ?")
+pub async fn edit_prompt(id: i64, prompt_data: &PromptData) -> ResT<bool> {
+    sqlx::query("UPDATE prompts SET challenge = ?, prompt = ?, size_percentage = ?, custom_duration = ?, is_special = ?, extra_announcement_text = ? WHERE rowid = ?")
         .bind(prompt_data.challenge.raw())
         .bind(&prompt_data.prompt)
-        .bind(prompt_data.size_percentage)
+        .bind(prompt_data.size_percentage.map(|x| x as i32))
+        .bind(prompt_data.custom_duration.map(|x| x as i32))
+        .bind(prompt_data.is_special)
+        .bind(&prompt_data.extra_announcement_text)
         .bind(id)
         .execute(pool())
         .await
@@ -479,18 +506,21 @@ pub async fn edit_prompt(id: i64, prompt_data: &PromptData) -> Result<bool, Erro
         .map_err(|e| e.into())
 }
 
-
 /// Get the id in the db table of the nth prompt in a given queue.
-pub async fn get_prompt_id(challenge: Challenge, position: usize) -> Result<i64, Error> {
+pub async fn get_prompt_id(challenge: Challenge, position: usize) -> ResT<i64> {
     let prompts = get_prompts(challenge).await?;
     let name = poise::ChoiceParameter::name(&challenge);
-    Ok(prompts.get(position.checked_sub(1).ok_or("There is no 0th prompt.")?).ok_or(format!("There is no {position}th prompt in queue {name}."))?.0)
+    Ok(prompts
+        .get(position.checked_sub(1).ok_or("There is no 0th prompt.")?)
+        .ok_or(format!("There is no {position}th prompt in queue {name}."))?
+        .0)
 }
 
 /// Get the id and data of the nth prompt in a given queue
-pub async fn get_prompt(challenge: Challenge, position: usize) -> Result<(i64,PromptData), Error> {
+pub async fn get_prompt(challenge: Challenge, position: usize) -> ResT<(i64, PromptData)> {
     let id = get_prompt_id(challenge, position).await?;
-    let res: (i64, String, Option<i16>) = sqlx::query_as("SELECT challenge, prompt, size_percentage FROM prompts WHERE rowid = ? LIMIT 1")
+    let res: (i64, String, Option<u16>, Option<u16>, Option<bool>, Option<String>) = 
+        sqlx::query_as("SELECT challenge, prompt, size_percentage, custom_duration, is_special, extra_announcement_text FROM prompts WHERE rowid = ? LIMIT 1")
         .bind(id)
         .fetch_optional(pool())
         .await
@@ -498,34 +528,68 @@ pub async fn get_prompt(challenge: Challenge, position: usize) -> Result<(i64,Pr
         .and_then(|r| {
             r.ok_or_else(|| format!("No prompt with id {}", id).into())
         })?;
-    Ok( (id, PromptData {challenge, prompt: res.1, size_percentage: res.2}) )
+    Ok((
+        id,
+        PromptData {
+            challenge,
+            prompt: res.1,
+            size_percentage: res.2,
+            custom_duration: res.3,
+            is_special: res.4,
+            extra_announcement_text: res.5,
+        },
+    ))
 }
 
 /// Get all prompts for a challenge, together with their ids in the db table.
-pub async fn get_prompts(challenge: Challenge) -> Result<Vec<(i64,PromptData)>, Error> {
-    sqlx::query_as("SELECT rowid, prompt, size_percentage FROM prompts WHERE challenge = ? ORDER BY rowid ASC")
+pub async fn get_prompts(challenge: Challenge) -> ResT<Vec<(i64, PromptData)>> {
+    sqlx::query_as("SELECT rowid, prompt, size_percentage, custom_duration, is_special, extra_announcement_text FROM prompts WHERE challenge = ? ORDER BY rowid ASC")
         .bind(challenge.raw())
         .fetch_all(pool())
         .await
         .map_err(|e| e.into())
         .map(|x| x.into_iter()
-            .map(|(a, b, c): (i64, String, Option<i16>)| (a, PromptData {challenge: challenge, prompt: b, size_percentage: c }))
+            .map(|(a, b, c, d, e, f): (i64, String, Option<u16>, Option<u16>, Option<bool>, Option<String>)| 
+            (a, PromptData {challenge: challenge, prompt: b, size_percentage: c, custom_duration: d,
+                is_special: e, extra_announcement_text: f }))
             .collect())
 }
 
 /// Get stats for a week.
-pub async fn weekinfo(week: Option<u64>) -> Result<WeekInfo, Error> {
-    let week = match week {
-       Some(w) => w as i64,
-       None => current_week().await?,
-    };
-
-    sqlx::query_as(r#"
-        SELECT * FROM weeks WHERE week = ? LIMIT 1;
-    "#)
+pub async fn get_week_info(week: i64, challenge: Challenge) -> ResT<WeekInfo> {
+    sqlx::query_as(
+        r#"SELECT week, challenge, prompt, target_start_time, target_end_time, actual_start_time, actual_end_time, is_special FROM weeks WHERE week = ? AND challenge = ? LIMIT 1; "#)
         .bind(week)
+        .bind(challenge.raw() as i64)
         .fetch_optional(pool())
         .await
-        .map_err(|e| format!("Failed to get week info: {}", e))?
-        .ok_or_else(|| format!("No info for week {}", week).into())
+        .map_err(|e| e.to_string())
+        .map(|x| { 
+            x.map(|y: (i64, i64, String, i64, i64, i64, i64, bool)|
+             WeekInfo { week: y.0, challenge: y.1.into(), prompt: y.2, 
+                target_start_time: NaiveDateTime::from_timestamp(y.4, 0), target_end_time: NaiveDateTime::from_timestamp(y.5, 0),
+                actual_start_time: NaiveDateTime::from_timestamp(y.4, 0), actual_end_time: NaiveDateTime::from_timestamp(y.4, 0),
+                 is_special: y.7}) 
+        })
+        .map(|x| x.ok_or("There is no such week in the database.".into()))?
+}
+
+/// Inserts a week into the db or modifies it if it's already there.
+pub async fn insert_or_modify_week(week_info: WeekInfo) -> Res {
+    sqlx::query(r#"
+    INSERT INTO weeks (week, challenge, prompt, target_start_time, target_end_time, actual_start_time, actual_end_time, is_special) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+    ON CONFLICT (week, challenge) DO UPDATE SET (prompt, target_start_time, target_end_time, actual_start_time, actual_end_time, is_special) = (?3, ?4, ?5, ?6, ?7, ?8);
+"#)
+    .bind(week_info.week)
+    .bind(week_info.challenge.raw() as i64)
+    .bind(week_info.prompt)
+    .bind(week_info.target_start_time.timestamp())
+    .bind(week_info.target_end_time.timestamp())
+    .bind(week_info.actual_start_time.timestamp())
+    .bind(week_info.actual_end_time.timestamp())
+    .bind(week_info.is_special)
+    .execute(pool())
+    .await
+    .map(|_| ())
+    .map_err(|e| e.into())
 }

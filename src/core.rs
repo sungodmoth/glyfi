@@ -1,9 +1,10 @@
-use std::str::FromStr;
-use std::sync::atomic::AtomicBool;
-use poise::CreateReply;
-use poise::serenity_prelude::{CacheHttp, Colour, CreateEmbed, CreateEmbedFooter, CreateMessage, UserId};
-use crate::{__glyfi_terminate_bot, Context, Error, Res};
 use crate::sql::__glyfi_fini_db;
+use crate::{Context, Error, Res, __glyfi_terminate_bot};
+use poise::serenity_prelude::{
+    CacheHttp, Colour, CreateEmbed, CreateEmbedFooter, CreateMessage, UserId,
+};
+use poise::CreateReply;
+use std::sync::atomic::AtomicBool;
 
 /// Default colour to use for embeds.
 pub const DEFAULT_EMBED_COLOUR: Colour = Colour::from_rgb(176, 199, 107);
@@ -37,13 +38,21 @@ macro_rules! err_sync {
 }
 
 /// Logging.
-pub async fn __glyfi_log_internal_error(e: &str) { eprintln!("[Error]: {}", e); }
+pub async fn __glyfi_log_internal_error(e: &str) {
+    eprintln!("[Error]: {}", e);
+}
 
-pub async fn __glyfi_log_internal(e: &str) { eprintln!("[Info]: {}", e); }
+pub async fn __glyfi_log_internal(e: &str) {
+    eprintln!("[Info]: {}", e);
+}
 
-pub fn __glyfi_log_internal_error_sync(e: &str) { eprintln!("[Error]: {}", e); }
+pub fn __glyfi_log_internal_error_sync(e: &str) {
+    eprintln!("[Error]: {}", e);
+}
 
-pub fn __glyfi_log_internal_sync(e: &str) { eprintln!("[Info]: {}", e); }
+pub fn __glyfi_log_internal_sync(e: &str) {
+    eprintln!("[Info]: {}", e);
+}
 
 /// Create an embed with some default settings applied to id.
 pub fn create_embed(ctx: &Context<'_>) -> CreateEmbed {
@@ -86,8 +95,10 @@ pub async fn handle_command_error(e: poise::FrameworkError<'_, crate::Data, Erro
             // Get the nested error, if possible.
             let command_error = match e {
                 poise::FrameworkError::Command { error, .. } => error.to_string(),
-                poise::FrameworkError::CommandStructureMismatch { description, .. } => description.to_owned(),
-                _ => "".to_string()
+                poise::FrameworkError::CommandStructureMismatch { description, .. } => {
+                    description.to_owned()
+                }
+                _ => "".to_string(),
             };
 
             // Log it in case sending it fails.
@@ -100,13 +111,15 @@ pub async fn handle_command_error(e: poise::FrameworkError<'_, crate::Data, Erro
                 CreateReply::default()
                     .ephemeral(true)
                     .content(safe_truncate(format!("Error: {}", command_error), 2000)),
-            ).await {
+            )
+            .await
+            {
                 err!(e.to_string());
             }
         }
 
         // We don’t use prefix commands.
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 
@@ -126,7 +139,8 @@ pub async fn report_user_error(ctx: impl CacheHttp, user: UserId, s: &str) {
     async fn aux(ctx: &impl CacheHttp, user: UserId, s: &str) -> Res {
         // Attempt to DM the user about this.
         let ch = user.create_dm_channel(&ctx).await?;
-        ch.send_message(&ctx, CreateMessage::new().content(format!("Error: {}", s))).await?;
+        ch.send_message(&ctx, CreateMessage::new().content(format!("Error: {}", s)))
+            .await?;
         Ok(())
     }
 
@@ -138,7 +152,9 @@ pub async fn report_user_error(ctx: impl CacheHttp, user: UserId, s: &str) {
 
 /// Truncate a string w/o panicking.
 pub fn safe_truncate(mut s: String, mut len: usize) -> String {
-    if s.len() <= len { return s; }
+    if s.len() <= len {
+        return s;
+    }
     if len == 0 {
         s.clear();
         return s;
@@ -160,12 +176,17 @@ pub fn safe_truncate(mut s: String, mut len: usize) -> String {
 pub async fn terminate() {
     // Don’t terminate twice.
     static TERMINATION_LOCK: AtomicBool = AtomicBool::new(false);
-    if TERMINATION_LOCK.compare_exchange(
-        false,
-        true,
-        std::sync::atomic::Ordering::SeqCst,
-        std::sync::atomic::Ordering::SeqCst,
-    ).is_err() { return; }
+    if TERMINATION_LOCK
+        .compare_exchange(
+            false,
+            true,
+            std::sync::atomic::Ordering::SeqCst,
+            std::sync::atomic::Ordering::SeqCst,
+        )
+        .is_err()
+    {
+        return;
+    }
 
     // Shutdown asynchronously running code.
     unsafe {
