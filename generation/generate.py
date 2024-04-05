@@ -45,61 +45,53 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compiles a single glyph/ambigram challenge image and outputs as png. Requires LaTeX installation, pdftoppm and imagemagick.")
     parser.add_argument("-v", "--verbose", action="store_true", help="print outputs of the subprocesses (e.g. pdftoppm) - primarily useful for debugging")
     parser.add_argument("-o", "--out", type=str, default=None, help="name of the output png (if unspecified, will follow the name of the chosen subcommand e.g. glyph_announcement.png)", metavar="FILE")
-    parser.add_argument("-d", "--date", type=str, default=None, help="date to be displayed on generated images (format DD/MM/YYYY) - defaults to today's date, but override may be needed if we are late")
+    parser.add_argument("--start_date", type=str, default=None, help="date of beginning of challenge")
+    parser.add_argument("--end_date", type=str, default=None, help="date of end of challenge")
+    parser.add_argument("--week", type=int, default=None, help="current week number")
     subcommands = parser.add_subparsers(title="subcommands", description="run ``<SUBCOMMAND> --help`` for that subcommand's usage", required=True, dest="subcommand")
-    glyph_announcement = subcommands.add_parser("glyph_announcement", help="glyph_announcement [-size_percentage PERCENT] <GLYPH> <WEEK>")
+    glyph_announcement = subcommands.add_parser("glyph_announcement", help="glyph_announcement [-size_percentage PERCENT] <GLYPH>")
     glyph_announcement.add_argument("glyph", help="the glyph to be announced")
-    glyph_announcement.add_argument("week", type=int, help="id of the week to generate for")
     glyph_announcement.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    ambigram_announcement = subcommands.add_parser("ambigram_announcement", help="ambigram_announcement [-size_percentage PERCENT] <AMBI> <WEEK>")
+    ambigram_announcement = subcommands.add_parser("ambigram_announcement", help="ambigram_announcement [-size_percentage PERCENT] <AMBI>")
     ambigram_announcement.add_argument("ambi")
-    ambigram_announcement.add_argument("week", type=int, help="id of the week to generate for")
     ambigram_announcement.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    glyph_poll = subcommands.add_parser("glyph_poll", help="glyph_poll [--cols N] [-size_percentage PERCENT] <GLYPH> <WEEK>")
+    glyph_poll = subcommands.add_parser("glyph_poll", help="glyph_poll [--cols N] [-size_percentage PERCENT] <GLYPH>")
     glyph_poll.add_argument("glyph")
-    glyph_poll.add_argument("week", type=int, help="id of the week to generate for")
     glyph_poll.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
     glyph_poll.add_argument("--cols", type=int, default=None, help="width in columns (determined from number of submissions by default)")
-    ambigram_poll = subcommands.add_parser("ambigram_poll", help="ambigram_poll [--cols N] [-size_percentage PERCENT] <AMBI> <WEEK>")
+    ambigram_poll = subcommands.add_parser("ambigram_poll", help="ambigram_poll [--cols N] [-size_percentage PERCENT] <AMBI>")
     ambigram_poll.add_argument("ambi")
-    ambigram_poll.add_argument("week", type=int, help="id of the week to generate for")
     ambigram_poll.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
     ambigram_poll.add_argument("--cols", type=int, default=None, help="width in columns (determined from number of submissions by default)")
-    glyph_first = subcommands.add_parser("glyph_first", help="glyph_first <NICKNAME> <USER_ID> <SUB_ID> <WEEK> [-size_percentage PERCENT]")
+    glyph_first = subcommands.add_parser("glyph_first", help="glyph_first <NICKNAME> <USER_ID> <SUB_ID> [-size_percentage PERCENT]")
     glyph_first.add_argument("nickname")
     glyph_first.add_argument("user_id")
     glyph_first.add_argument("sub_id")
-    glyph_first.add_argument("week", type=int, help="id of the week to generate for")
     glyph_first.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    glyph_second = subcommands.add_parser("glyph_second", help="glyph_second <NICKNAME> <USER_ID> <SUB_ID> <WEEK> [-size_percentage PERCENT]")
+    glyph_second = subcommands.add_parser("glyph_second", help="glyph_second <NICKNAME> <USER_ID> <SUB_ID> [-size_percentage PERCENT]")
     glyph_second.add_argument("nickname")
     glyph_second.add_argument("user_id")
     glyph_second.add_argument("sub_id")
-    glyph_second.add_argument("week", type=int, help="id of the week to generate for")
     glyph_second.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    glyph_third = subcommands.add_parser("glyph_third", help="glyph_third <NICKNAME> <USER_ID> <SUB_ID> <WEEK> [-size_percentage PERCENT]")
+    glyph_third = subcommands.add_parser("glyph_third", help="glyph_third <NICKNAME> <USER_ID> <SUB_ID> [-size_percentage PERCENT]")
     glyph_third.add_argument("nickname")
     glyph_third.add_argument("user_id")
     glyph_third.add_argument("sub_id")
-    glyph_third.add_argument("week", type=int, help="id of the week to generate for")
     glyph_third.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    ambigram_first = subcommands.add_parser("ambigram_first", help="ambigram_first <NICKNAME> <USER_ID> <SUB_ID> <WEEK> [-size_percentage PERCENT]")
+    ambigram_first = subcommands.add_parser("ambigram_first", help="ambigram_first <NICKNAME> <USER_ID> <SUB_ID> [-size_percentage PERCENT]")
     ambigram_first.add_argument("nickname")
     ambigram_first.add_argument("user_id")
     ambigram_first.add_argument("sub_id")
-    ambigram_first.add_argument("week", type=int, help="id of the week to generate for")
     ambigram_first.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    ambigram_second = subcommands.add_parser("ambigram_second", help="ambigram_second <NICKNAME> <USER_ID> <SUB_ID> <WEEK> [-size_percentage PERCENT]")
+    ambigram_second = subcommands.add_parser("ambigram_second", help="ambigram_second <NICKNAME> <USER_ID> <SUB_ID> [-size_percentage PERCENT]")
     ambigram_second.add_argument("nickname")
     ambigram_second.add_argument("user_id")
     ambigram_second.add_argument("sub_id")
-    ambigram_second.add_argument("week", type=int, help="id of the week to generate for")
     ambigram_second.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
-    ambigram_third = subcommands.add_parser("ambigram_third", help="ambigram_third <NICKNAME> <USER_ID> <SUB_ID> <WEEK> [-size_percentage PERCENT]")
+    ambigram_third = subcommands.add_parser("ambigram_third", help="ambigram_third <NICKNAME> <USER_ID> <SUB_ID> [-size_percentage PERCENT]")
     ambigram_third.add_argument("nickname")
     ambigram_third.add_argument("user_id")
     ambigram_third.add_argument("sub_id")
-    ambigram_third.add_argument("week", type=int, help="id of the week to generate for")
     ambigram_third.add_argument("--size_percentage", type=int, default=None, help="percentage modifier to be applied to the font size")
     glyph_suggestions = subcommands.add_parser("glyph_suggestions", help="glyph_suggestions [--cols N] <GLYPH1> <GLYPH2> [...]")
     glyph_suggestions.add_argument("glyphs", nargs='*')
@@ -117,13 +109,7 @@ if __name__ == "__main__":
     fonts = list(zip(fontdata, get_all_ranges(fontdata)))
     #########################DATE###############################
     #current date in europe timezone
-    date = datetime.datetime.now(tz=zoneinfo.ZoneInfo("Europe/Amsterdam")).date()
-    #unix timestamp, but taking 4th January 1970 as our epoch, because that's a Sunday
-    date_unix_sunday = int(time.mktime(date.timetuple())) - 259200
-    #how many weeks have passed since epoch, where weeks are counted as starting on Sunday
-    week_number = date_unix_sunday // 604800
-    #now modulo this to get the four-week colour cycle
-    cycle_number = week_number % 4
+    cycle_number = args.week
     if cycle_number == 0:
         week_colour = "Blue"
     elif cycle_number == 1:
@@ -132,7 +118,7 @@ if __name__ == "__main__":
         week_colour = "Cyan"
     else:
         week_colour = "Red"
-    date_formatted = args.date or date.strftime("%d/%m/%Y")
+    date_formatted = args.start_date
     ########################FILE STUFF##########################
     with open("weekly_challenges_base.tex", "r", encoding='utf8') as f:
         contents = f.read()
@@ -140,15 +126,10 @@ if __name__ == "__main__":
         f.write(contents)
         f.writelines(
 fr"""
-\SetDate[{date_formatted}]
-\SaveDate[\Today]
-\AdvanceDate[7]
-\SaveDate[\NextWeek]
-\AdvanceDate[-14]
-\SaveDate[\ThisWeek]
-\AdvanceDate[-7]
-\SaveDate[\LastWeek]
-\SetDate[\Today]
+\SetDate[{args.start_date}]
+\SaveDate[\StartDate]
+\SetDate[{args.end_date}]
+\SaveDate[\EndDate]
 \WeekColor{{{week_colour}}}
 """)
         ####################GLYPH_ANNOUNCEMENT##################
@@ -174,11 +155,11 @@ fr"""
         ####################GLYPH_POLL########################
         if args.subcommand == "glyph_poll":
             dirr = f"images/glyph/{args.week}"
-            path = f"{dirr}/{sub.split('.')[0]}"
-            subs = sorted(list(filter(os.path.isfile, os.listdir(dirr))))
+            subs = sorted(list(filter(lambda x: os.path.isfile(f"{dirr}/{x}"), os.listdir(dirr))))
             buf = ""
             i = 1
             for sub in subs:
+                path = f"{dirr}/{sub.split('.')[0]}"
                 buf += fr"""\setimage{{{i}}}{{{path}}}
 """
                 i += 1
@@ -189,17 +170,17 @@ fr"""
 \def\NumberOfSubs{{{len(subs)}}}
 {buf}
 \glyphlabels
-\GlyphChallengeShowcase{{9}}{{{args.cols or determine_columns(len(subs),3)}}}
+\GlyphChallengeShowcase{{9}}{{{args.cols or determine_columns(len(subs),3, max_=4)}}}
 \end{{document}}
 """)
         ####################AMBIGRAM_POLL#####################
         if args.subcommand == "ambigram_poll":
-            dirr = f"images/glyph/{args.week}"
-            path = f"{dirr}/{sub.split('.')[0]}"
-            subs = sorted(list(filter(os.path.isfile, os.listdir(dirr))))
+            dirr = f"images/ambi/{args.week}"
+            subs = sorted(list(filter(lambda x: os.path.isfile(f"{dirr}/{x}"), os.listdir(dirr))))
             buf = ""
             i = 1
             for sub in subs:
+                path = f"{dirr}/{sub.split('.')[0]}"
                 buf += fr"""\setimage{{{i}}}{{{path}}}
 """
                 i += 1
@@ -210,7 +191,7 @@ fr"""
 \def\NumberOfAmbis{{{len(subs)}}}
 {buf}
 \glyphlabels
-\AmbigramChallengeShowcase{{11}}{{{args.cols or determine_columns(len(subs),3)}}}
+\AmbigramChallengeShowcase{{11}}{{{args.cols or determine_columns(len(subs), 3, max_=3)}}}
 \end{{document}}
 """)
         ####################GLYPH_WINNERS########################

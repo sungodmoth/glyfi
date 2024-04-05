@@ -1,5 +1,6 @@
 use crate::sql::__glyfi_fini_db;
 use crate::{Context, Error, Res, __glyfi_terminate_bot};
+use chrono::Utc;
 use poise::serenity_prelude::{
     CacheHttp, Colour, CreateEmbed, CreateEmbedFooter, CreateMessage, UserId,
 };
@@ -39,19 +40,19 @@ macro_rules! err_sync {
 
 /// Logging.
 pub async fn __glyfi_log_internal_error(e: &str) {
-    eprintln!("[Error]: {}", e);
+    eprintln!("[Error@{}]: {}", Utc::now().format("%H:%M:%S%.3fZ"), e);
 }
 
 pub async fn __glyfi_log_internal(e: &str) {
-    eprintln!("[Info]: {}", e);
+    eprintln!("[Info@{}]: {}", Utc::now().format("%H:%M:%S%.3fZ"), e);
 }
 
 pub fn __glyfi_log_internal_error_sync(e: &str) {
-    eprintln!("[Error]: {}", e);
+    eprintln!("[Error@{}]: {}", Utc::now().format("%H:%M:%S%.3fZ"), e);
 }
 
 pub fn __glyfi_log_internal_sync(e: &str) {
-    eprintln!("[Info]: {}", e);
+    eprintln!("[Info@{}]: {}", Utc::now().format("%H:%M:%S%.3fZ"), e);
 }
 
 /// Create an embed with some default settings applied to id.

@@ -8,6 +8,7 @@ mod file;
 mod scheduling;
 mod server_data;
 mod sql;
+mod types;
 
 use crate::commands::{nickname, profile, queue, update};
 use crate::core::{log_command, terminate};
@@ -15,9 +16,11 @@ use crate::events::GlyfiEvents;
 use crate::scheduling::schedule_loop;
 use crate::server_data::SERVER_ID;
 use clap::Parser;
+use commands::image;
+use poise::serenity_prelude::futures::TryFutureExt;
 use poise::serenity_prelude as ser;
 use std::sync::Arc;
-use tokio::join;
+use tokio::try_join;
 
 /// Global context. Ugly, but this is the best way I can think
 /// of to support graceful shutdown on Ctrl+C etc.
@@ -104,6 +107,7 @@ async fn main() {
                 nickname(),
                 profile(),
                 queue(),
+                image(),
                 update(),
             ],
             ..Default::default()
@@ -124,12 +128,25 @@ async fn main() {
         })
         .build();
 
+    //dummy testing code, set up some initial state
+    {
+        use types::{Challenge, WeekInfo};
+        use sql::{insert_or_modify_week, set_current_week};
+        use chrono::{DateTime, Utc};
+        for challenge in [Challenge::Glyph, Challenge::Ambigram].into_iter() {
+            let current_time = Utc::now();
+            insert_or_modify_week(WeekInfo { challenge, week: 0, prompt: "A".to_owned(), size_percentage: 100, target_start_time: current_time,
+                target_end_time: current_time + challenge.default_duration(), actual_start_time: current_time, 
+                actual_end_time: current_time + challenge.default_duration(), is_special: false, num_subs: 0, poll_message_id: None, second_poll_message_id: None }).await;
+            set_current_week(challenge, 0).await;
+        }
+    }
     let mut client =
         ser::ClientBuilder::new(server_data::DISCORD_BOT_TOKEN, ser::GatewayIntents::all())
             .framework(fw)
             .event_handler(GlyfiEvents)
             .await
             .unwrap();
-    let scheduler = schedule_loop();
-    join!(scheduler, client.start());
+        
+    client.start().await.unwrap();
 }

@@ -1,34 +1,13 @@
+use chrono::{DateTime, Duration, Utc};
 use poise::builtins::register_application_commands;
 use poise::{ChoiceParameter, CreateReply};
 use poise::serenity_prelude::{CreateAttachment, CreateEmbed, CreateEmbedAuthor};
+use tokio::time;
 use crate::{info, sql, Context, Res, ResT};
 use crate::core::{create_embed, file_mtime, handle_command_error};
-use crate::sql::{get_current_week, edit_prompt, get_prompt, swap_prompts, Challenge, PromptData};
-
-async fn generate_challenge_image(prompt_data: &PromptData) -> ResT<String> {
-    let name = match prompt_data.challenge {
-        Challenge::Glyph => "glyph_announcement",
-        Challenge::Ambigram => "ambigram_announcement",
-    };
-
-    // Command for generating the image.
-    let mut command = tokio::process::Command::new("./generate.py");
-    command.arg(name);
-    command.arg(String::from(&prompt_data.prompt).replace("\\n", "\\\\"));
-    command.arg(get_current_week(prompt_data.challenge).await?.to_string());
-    if let Some(percentage) = prompt_data.size_percentage {
-        command.arg("--size_percentage");
-        command.arg(percentage.to_string());
-    }
-    command.kill_on_drop(true);
-    command.current_dir("./generation");
-    info!("Running shell command {:?}", command);
-
-    // Run it.
-    let res = command.spawn()?.wait().await?;
-    if !res.success() { return Err("Failed to generate image".into()); }
-    Ok(prompt_data.challenge.announcement_image_path())
-}
+use crate::sql::{add_prompt, edit_prompt, forecast_prompt_details, get_current_week, get_prompt, get_week_info, swap_prompts};
+use crate::types::{Challenge, ChallengeImageOptions::*, PreviewableImages, PromptData, UploadableImages};
+use crate::file::generate_challenge_image;
 
 /// Edit your nickname.
 #[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error")]
@@ -151,11 +130,20 @@ pub async fn queue_add(
         custom_duration, is_special: is_special.filter(|x| x == &true), extra_announcement_text };
 
     // Save prompt.
-    sql::add_prompt(&prompt_data).await?;
+    add_prompt(&prompt_data).await?;
 
+    // The next operation reads the same database we just updated. Unfortunately it seems like we have to wait 
+    // just a bit in order to make sure that we get the correctly updated data.
+    let mut timer = tokio::time::interval(time::Duration::from_secs(1));
+    timer.tick().await;
+    timer.tick().await;
+
+    let (week_num, start_time, end_time) = forecast_prompt_details(challenge, -1).await?;
+    
     // Generate image based on new prompt.
     ctx.defer_ephemeral().await?;
-    let path = generate_challenge_image(&prompt_data).await?;
+    let path = generate_challenge_image(challenge, week_num, Announcement { prompt: prompt_data.prompt, size_percentage: prompt_data.size_percentage.unwrap_or(100) },
+        start_time, end_time, false).await?;
 
     // Get mtime. This is just a little sanity check.
     file_mtime(&path)?;
@@ -198,9 +186,18 @@ pub async fn queue_edit(
     }
 
     if changed {
+
+        // The next operation reads the same database we just updated. Unfortunately it seems like we have to wait 
+        // just a bit in order to make sure that we get the correctly updated data.
+        let mut timer = tokio::time::interval(time::Duration::from_secs(1));
+        timer.tick().await;
+        timer.tick().await;
+        let (week_num, start_time, end_time) = forecast_prompt_details(challenge, position as i64).await?;
+        
         // Generate image based on modified prompt.
         ctx.defer_ephemeral().await?;
-        let path = generate_challenge_image(&prompt_data).await?;
+        let path = generate_challenge_image(challenge, week_num, Announcement { prompt: prompt_data.prompt, size_percentage: prompt_data.size_percentage.unwrap_or(100) },
+        start_time, end_time, false).await?;
 
         // Get mtime. This is just a little sanity check.
         file_mtime(&path)?;
@@ -316,34 +313,68 @@ pub async fn queue_preview(
     #[description = "The challenge to preview an entry from"] challenge: Challenge,
     #[description = "The entry number in the queue to preview"] position: usize,
 ) -> Res {
+    let (week_num, start_time, end_time) = forecast_prompt_details(challenge, position as i64).await?;
+
     ctx.defer_ephemeral().await?;
     let prompt_data = sql::get_prompt(challenge, position).await?;
-    let path = generate_challenge_image(&prompt_data.1).await?;
+    let path = generate_challenge_image(challenge, week_num, Announcement { prompt: prompt_data.1.prompt, size_percentage: prompt_data.1.size_percentage.unwrap_or(100) },
+        start_time, end_time, false).await?;
+
     ctx.send(CreateReply::default()
         .attachment(CreateAttachment::path(path).await?)
     ).await?;
     Ok(())
 }
 
-// /// Marks the current week as special.
-// #[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", rename = "mark_special", default_member_permissions = "ADMINISTRATOR")]
-// pub async fn week_mark_special(
-//     ctx: Context<'_>,
-//     #[description = "The challenge to mark next week as special for."] challenge: Challenge,
-// ) -> Res {
-//     ctx.defer_ephemeral().await?;
-//     ctx.send(CreateReply::default()
-//         .attachment(CreateAttachment::path(path).await?)
-//     ).await?;
-//     Ok(())
-// }
-
-
 /// Update bot commands.
 #[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", default_member_permissions = "ADMINISTRATOR")]
 pub async fn update(ctx: Context<'_>) -> Res {
     register_application_commands(ctx, false).await?;
     Ok(())
+}
+
+#[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error",
+ subcommands("image_preview", "image_upload"), 
+ default_member_permissions = "ADMINISTRATOR")]
+pub async fn image(_ctx: Context<'_>) -> Res { unreachable!(); }
+
+#[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", rename="preview", default_member_permissions = "ADMINISTRATOR")]
+pub async fn image_preview(ctx: Context<'_>, 
+    #[description="The challenge to preview an image for"] challenge: Challenge,
+    #[description="The image to preview"] image_type: PreviewableImages,
+    #[description="Whether or not to return the raw pdf file instead of the rendered png. Defaults to false"] raw: Option<bool>) -> Res {
+        
+    ctx.defer_ephemeral().await?;
+    let path = match image_type {
+        PreviewableImages::Announcement => { 
+            let next_prompt_data = get_prompt(challenge, 1).await?.1;
+            let (week_num, start_time, end_time) = forecast_prompt_details(challenge, 1).await?;
+            generate_challenge_image(challenge, week_num, 
+                Announcement { prompt: next_prompt_data.prompt , size_percentage: next_prompt_data.size_percentage.unwrap_or(100) }, 
+                start_time, end_time, raw.unwrap_or(false)).await? },
+        PreviewableImages::Poll => {
+            let week_num = get_current_week(challenge).await?;
+            let week_info = get_week_info(week_num, challenge).await?;
+            generate_challenge_image(challenge, week_num, Poll { prompt: week_info.prompt, size_percentage: week_info.size_percentage }, week_info.target_start_time, 
+                week_info.target_end_time, raw.unwrap_or(false)).await? },
+        PreviewableImages::FirstPlace => { unimplemented!() },
+        PreviewableImages::SecondPlace => { unimplemented!() },
+        PreviewableImages::ThirdPlace => {unimplemented!() },
+    };
+
+    ctx.send(CreateReply::default()
+        .attachment(CreateAttachment::path(path).await?)
+    ).await?;
+
+    Ok(())
+}
+
+#[poise::command(slash_command, ephemeral, guild_only, on_error = "handle_command_error", rename = "upload", default_member_permissions = "ADMINISTRATOR")]
+pub async fn image_upload(ctx: Context<'_>, 
+    #[description="The challenge to upload an image for"] challenge: Challenge,
+    #[description="The image type to upload"] image_type: UploadableImages) -> Res {
+    
+    todo!()
 }
 
 ///// Show stats for a week.

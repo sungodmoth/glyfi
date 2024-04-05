@@ -95,7 +95,10 @@ def split_script_boundaries(string, scripts):
     return res
 
 def wrap_in_tabular(str):
-    return fr"\begin{{tabular}}{{c}}{str}\end{{tabular}}"
+    #currently noop because it was introduced to fix a line break issue but i seem to have found another way to
+    #resolve that issue, and it was causing a spacing issue elsewhere
+    return str
+    #return fr"\begin{{tabular}}{{c}}{str}\end{{tabular}}"
 
 def match_and_format_font(string, fonts, scripts, size_percentage, default_size, style, verbose):
     ## Combines font_size_format and match_font to automatically find the correct

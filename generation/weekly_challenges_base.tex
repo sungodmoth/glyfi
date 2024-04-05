@@ -171,9 +171,7 @@ advdate
 
 \def\GlyphChallengeAnnouncement{
     \foreach \w/\x/\y/\z in {
-        %\ThisWeekColor/\ThisWeekGlyph/\ThisWeek/\Today,
-        %\LastWeekColor/\LastWeekGlyph/\LastWeek/\ThisWeek,
-        \NextWeekColor/\NextWeekGlyph/\Today/\NextWeek
+        \NextWeekColor/\NextWeekGlyph/\StartDate/\EndDate
     }{
         \Announcement{\w}{\x}{\origdate\daterange\y\z}{0}{Weekly Glyph Challenge}{100}{\w}{center}{0}
     }
@@ -199,7 +197,7 @@ advdate
         {Weekly Glyph Challenge} % #6 TITLE
         {\ThisWeekGlyph} % #7 GLYPH OR WORD INSIDE THE BADGE
         {circle, fill=White, draw=\ThisWeekColor, text=\ThisWeekColor} % #8 BADGE SHAPE
-        {\origdate\daterange\ThisWeek\Today} % #9 DATE (ORANGE SUBTITLE)
+        {\origdate\daterange\StartDate\EndDate} % #9 DATE (ORANGE SUBTITLE)
         {1} % ##1 ASPECT RATIO (WIDTH OVER HEIGHT)
         {.7} % ##2 MARGIN
         {getglyph} % ##3 NAME OF MACRO TO BE CALLED
@@ -217,7 +215,7 @@ advdate
     {Glyph Suggestion Vote!} % #6 TITLE
     {?} % #7 GLYPH OR WORD INSIDE THE BADGE
     {circle, fill=Orange, draw=White, text=White} % #8 BADGE SHAPE
-    {\printdayoff\origdate\today} % #9 DATE (ORANGE SUBTITLE)
+    {\printdayoff\origdate\StartDate} % #9 DATE (ORANGE SUBTITLE)
     {1} % ##1 ASPECT RATIO (WIDTH OVER HEIGHT)
     {0.7} % ##2 MARGIN (4 / number of columns)
     {getpollglyph} % ##3 NAME OF MACRO TO BE CALLED
@@ -228,9 +226,7 @@ advdate
 
 \def\AmbigramChallengeAnnouncement{
     \foreach \w/\x/\y/\z in {
-        % Purple/\ThisWeekAmbigram/\ThisWeek/\Today,
-        % Purple/\LastWeekAmbigram/\LastWeek/\ThisWeek,
-        Purple/\NextWeekAmbigram/\Today/\NextWeek
+        Purple/\NextWeekAmbigram/\StartDate/\EndDate
     }{
         \Announcement{\w}{\bfseries\x}{\origdate\daterange\y\z}{3}{Weekly Ambigram Challenge}{80}{\w}{center}{0} % 80
     }
@@ -257,7 +253,7 @@ advdate
         {Weekly Ambigram Challenge} % #6 TITLE
         {\ThisWeekAmbigram} % #7 GLYPH OR WORD INSIDE THE BADGE
         {rectangle, rounded corners=.5cm, fill=White, draw=Purple, text=Purple} % #8 BADGE SHAPE
-        {\origdate\daterange\ThisWeek\Today} % #9 DATE (ORANGE SUBTITLE)
+        {\origdate\daterange\StartDate\EndDate} % #9 DATE (ORANGE SUBTITLE)
         {1.5} % ##1 ASPECT RATIO (WIDTH OVER HEIGHT)
         {.75} % ##2 MARGIN
         {getambi} % ##3 NAME OF MACRO TO BE CALLED
@@ -276,7 +272,7 @@ advdate
         {Ambigram Suggestion Vote!} % #6 TITLE
         {?} % #7 GLYPH OR WORD INSIDE THE BADGE
         {circle, fill=White, draw=Orange, text=Orange} % #8 BADGE SHAPE
-        {\printdayoff\origdate\today} % #9 DATE (ORANGE SUBTITLE)
+        {\printdayoff\origdate\StartDate} % #9 DATE (ORANGE SUBTITLE)
         {2} % ##1 ASPECT RATIO (WIDTH OVER HEIGHT)
         {.7} % ##2 MARGIN
         {getpollambi} % ##3 NAME OF MACRO TO BE CALLED
@@ -402,7 +398,7 @@ WithShadow/.style={
         \node at (canvas.south east) [text=Pear, anchor=south east, inner sep=.3cm, fontscale=14] {\itshape\bfseries Glyphs \& Alphabets~~};
 
         % BIG GLYPH OR AMBIGRAM PROMPT IN THE CENTER
-        \node at ($(canvas.south)!.5!(title.south)$) [#7, fontscale=#6, align=#8] {#2};
+        \node at ($(canvas.south)!.5!(title.south)$) [#7, align=#8] {#2};
 
     \end{tikzpicture}
 }

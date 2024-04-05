@@ -1,10 +1,12 @@
+use chrono::{DateTime, Utc};
 use poise::serenity_prelude::{Attachment, Member, MessageId};
 use tokio::{
     fs::{self, remove_file, File},
     io::AsyncWriteExt,
 };
 
-use crate::{info, sql::Challenge, Res};
+use crate::{info, types::ChallengeImageOptions, Res, ResT};
+use crate::types::Challenge;
 
 /// Download a submission's image file to the file system
 pub async fn download_submission(
@@ -92,4 +94,58 @@ pub async fn convert_image_type(prefix: &str, current_ext: &str, desired_ext: &s
         remove_file(format!("{prefix}.{current_ext}")).await?;
     }
     Ok(())
+}
+
+/// Generates a specified challenge image, returning a path to either the image file
+/// or the raw pdf file if that is requested.
+pub async fn generate_challenge_image(challenge: Challenge, week_num: i64, options: ChallengeImageOptions,
+        start_time: DateTime<Utc>, end_time: DateTime<Utc>, raw: bool) -> ResT<String> {
+    
+    let name = format!("{}_{}", challenge.long_name(), options.suffix());
+    let mut command = tokio::process::Command::new("./generate.py");
+    command.arg("--verbose");
+    command.arg("--week");
+    command.arg(week_num.to_string());
+    command.arg("--start_date");
+    command.arg(format!("{}",start_time.format("%d/%m/%Y")));
+    command.arg("--end_date");
+    command.arg(format!("{}",end_time.format("%d/%m/%Y")));
+    command.arg(&name);
+    match options {
+        ChallengeImageOptions::Announcement { prompt, size_percentage } => {
+            command.arg(&prompt);
+            command.arg("--size_percentage");
+            command.arg(size_percentage.to_string());
+        }
+        ChallengeImageOptions::Poll { prompt, size_percentage} => {
+            command.arg(&prompt);
+            command.arg("--size_percentage");
+            command.arg(size_percentage.to_string());
+        }
+        ChallengeImageOptions::Winner { position, winner_nick, winner_id, submission_id: submission } => {
+            command.arg(&winner_nick);
+            command.arg(winner_id.to_string());
+            command.arg(submission.to_string());
+        }
+    }
+    command.kill_on_drop(true);
+    command.current_dir("./generation");
+    info!("Running shell command {:?}", command);
+
+    // Run it.
+    let res = command.spawn()?.wait().await?;
+    if !res.success() { return Err("Failed to generate image".into()); }
+    Ok(if raw { "./generation/weekly_challenges.pdf".to_owned() } else { Challenge::name_to_path(&name)} )
+}
+
+pub async fn initialise_submissions_directory(challenge: Challenge, week_num: i64) -> Res {
+    let short_name = challenge.short_name();
+    let dir = format!("generation/images/{short_name}/{week_num}");
+    fs::create_dir(&dir).await.or_else(|err| {
+        if err.kind() == std::io::ErrorKind::AlreadyExists {
+            Ok(())
+        } else {
+            Err(err.into())
+        }
+    })
 }
