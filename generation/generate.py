@@ -284,10 +284,11 @@ fr"""
                 for line in lines:
                     a = line.strip().split("\t")[::-1]
                     glyph = (a or [None]).pop()
-                    size_override = (a or [None]).pop()
+                    size_percentage = (a or [None]).pop()
+                    size_percentage = int(size_percentage) if size_percentage else None
                     if glyph:
                         i += 1
-                        suggestions_formatted += fr"""\setpollglyph{{{i}}}{{{match_and_format_font(glyph, fonts, scripts, size_override, 40, "", args.verbose)}}}
+                        suggestions_formatted += fr"""\setpollglyph{{{i}}}{{{match_and_format_font(glyph, fonts, scripts, size_percentage, 44, "", args.verbose)}}}
     """
             f.writelines(
 fr"""
@@ -316,10 +317,11 @@ fr"""
                 for line in lines:
                     a = line.strip().split("\t")[::-1]
                     ambi = (a or [None]).pop()
-                    size_override = (a or [None]).pop()
+                    size_percentage = (a or [None]).pop()
+                    size_percentage = int(size_percentage) if size_percentage else None
                     if ambi:
                         i += 1
-                        suggestions_formatted += fr"""\setpollambi{{{i}}}{{{match_and_format_font(ambi, fonts, scripts, size_override, 28, "", args.verbose)}}}
+                        suggestions_formatted += fr"""\setpollambi{{{i}}}{{{match_and_format_font(ambi, fonts, scripts, size_percentage, 28, "", args.verbose)}}}
     """
             f.writelines(
 fr"""

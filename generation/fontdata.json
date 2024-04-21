@@ -128,7 +128,7 @@
         }, {
             "name": "Noto Sans Kharoshthi"
         }, {
-            "name": "Noto Sans Khmer"
+            "name": "Noto Serif Khmer"
         }, {
             "name": "Noto Sans Khojki"
         },
@@ -179,7 +179,11 @@
         }, {
             "name": "Noto Sans Modi"
         }, {
-            "name": "Noto Sans Mongolian"
+            "name": "Menk Hawang Tig",
+            "vertical": true
+        }, {
+            "name": "Noto Sans Mongolian",
+            "vertical": true
         }, {
             "name": "Noto Sans Mro"
         }, {

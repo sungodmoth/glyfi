@@ -215,13 +215,13 @@ advdate
     {Glyph Suggestion Vote!} % #6 TITLE
     {?} % #7 GLYPH OR WORD INSIDE THE BADGE
     {circle, fill=Orange, draw=White, text=White} % #8 BADGE SHAPE
-    {\printdayoff\origdate\StartDate} % #9 DATE (ORANGE SUBTITLE)
+    {\printdayoff\origdate\today} % #9 DATE (ORANGE SUBTITLE)
     {1} % ##1 ASPECT RATIO (WIDTH OVER HEIGHT)
     {0.7} % ##2 MARGIN (4 / number of columns)
     {getpollglyph} % ##3 NAME OF MACRO TO BE CALLED
     {PollNode} % ##4 DOGGO'S STUPID WORKAROUND
     {70} % ##5 BADGE TEXT SIZE
-    {40} % ##6 POLL SUGGESTION TEXT SIZE (number of columns x9)
+    {44} % ##6 POLL SUGGESTION TEXT SIZE (number of columns x9)
 }
 
 \def\AmbigramChallengeAnnouncement{
@@ -272,7 +272,7 @@ advdate
         {Ambigram Suggestion Vote!} % #6 TITLE
         {?} % #7 GLYPH OR WORD INSIDE THE BADGE
         {circle, fill=White, draw=Orange, text=Orange} % #8 BADGE SHAPE
-        {\printdayoff\origdate\StartDate} % #9 DATE (ORANGE SUBTITLE)
+        {\printdayoff\origdate\today} % #9 DATE (ORANGE SUBTITLE)
         {2} % ##1 ASPECT RATIO (WIDTH OVER HEIGHT)
         {.7} % ##2 MARGIN
         {getpollambi} % ##3 NAME OF MACRO TO BE CALLED

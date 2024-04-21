@@ -128,7 +128,11 @@ def match_and_format_font(string, fonts, scripts, size_percentage, default_size,
             if font["supports_styles"] == True:
                 buf += style + " "
         buf += substr
-    return font_size_format(None, size) + wrap_in_tabular(buf)
+        if "vertical" in font: 
+            if font["vertical"] == True:
+                buf = fr"\rotatebox{{-90}}{{{buf}}}"
+    #return font_size_format(None, size) + wrap_in_tabular(buf)
+    return buf
     
 def get_ranges(fontname):
     ## Given a font name, uses fontconfig to determine which glyph ranges it supports.
