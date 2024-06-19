@@ -77,7 +77,7 @@ async fn handle_vote(i: ComponentInteraction, ctx: Context, challenge: Challenge
                 vote_status_data.insert(user_id, Waiting(timestamp));
                 info!("Wait time for user {} has been updated to {} by vote for sub {}:{}", user_id, timestamp, challenge.short_name(), sub_num);
                 if !register_vote(challenge, week_num, user_id, sub_num).await? {
-                    info!("Database operation was not successful when registering vote.")
+                    info!("Database operation was not successful when registering vote.");
                 }
                 break;
             }
@@ -91,14 +91,15 @@ async fn handle_vote(i: ComponentInteraction, ctx: Context, challenge: Challenge
         };
         match status {
             Some(Waiting(timestamp)) => {
-                if Utc::now().timestamp_millis() > timestamp {
+                let now = Utc::now().timestamp_millis();
+                if now > timestamp {
                     {
                         let mut vote_status_data = lock.write().await;
                         // there is a chance that while we were waiting to acquire the write lock, some other thread 
                         // got to it first and has already marked as Responding. In that case we don't want two 
                         // threads to run the actual responding logic at the same time, so we get out of here.
                         if vote_status_data.get(&user_id) == Some(&Responding) {
-                            continue;
+                            return Ok(());
                         }
                         vote_status_data.insert(user_id, Responding);
                     }
@@ -118,6 +119,13 @@ async fn handle_vote(i: ComponentInteraction, ctx: Context, challenge: Challenge
                         vote_status_data.insert(user_id, Idle);
                     }
                     break;
+                } else {
+                    // we try to wait for precisely the right amount of time to avoid a more costly approach like checking
+                    // every `n` milliseconds - but we also add in a bit of pseudorandom delay, just to make sure each of the 
+                    // threads we're running here don't end up waiting for the exact same time, so it's more likely that one
+                    // of them is able to mark the state as Responding before the others check
+                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                        (timestamp + 25 + now % 47 - now) as u64)).await;
                 }
             },
             Some(Responding) => {
@@ -132,7 +140,6 @@ async fn handle_vote(i: ComponentInteraction, ctx: Context, challenge: Challenge
                 // Responding for 500ms, giving ample time for us to have read that and entered the above code path.
                 return Err("handle_vote reached unexpected state.".into()); }
         }
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }           
     Ok(())
 }

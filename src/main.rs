@@ -135,9 +135,9 @@ async fn main() {
         use chrono::{DateTime, Utc};
         for challenge in [Challenge::Glyph, Challenge::Ambigram].into_iter() {
             let current_time = Utc::now();
-            insert_or_modify_week(WeekInfo { challenge, week: 0, prompt: "A".to_owned(), size_percentage: 100, target_start_time: current_time,
-                target_end_time: current_time + challenge.default_duration(), actual_start_time: current_time, 
-                actual_end_time: current_time + challenge.default_duration(), is_special: false, num_subs: 0, poll_message_id: None, second_poll_message_id: None }).await;
+            insert_or_modify_week(WeekInfo { challenge, week: 0, prompt: "A".to_owned(), size_percentage: 100, target_start_time: current_time.into(),
+                target_end_time: (current_time + challenge.default_duration()).into(), actual_start_time: current_time.into(), 
+                actual_end_time: (current_time + challenge.default_duration()).into(), is_special: false, num_subs: 0, poll_message_id: None.into(), second_poll_message_id: None.into() }).await;
             set_current_week(challenge, 0).await;
         }
     }

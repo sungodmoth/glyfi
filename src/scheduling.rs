@@ -1,8 +1,8 @@
-use poise::serenity_prelude::{ButtonStyle, Context, CreateAttachment, CreateButton, CreateEmbed, CreateMessage, MessageId};
+use poise::serenity_prelude::{ButtonStyle, Context, CreateAttachment, CreateButton, CreateEmbed, CreateMessage, GuildId, MessageId};
 use tokio::time;
 use chrono::Utc;
 
-use crate::{err, file::{generate_challenge_image, initialise_submissions_directory}, info, server_data::{format_ambi_announcement_spiel, format_glyph_announcement_spiel, format_poll_spiel, EMPTY_MESSAGE, STATUS_UPDATE_CHANNEL_ID, VOTING_EMOJI_SEQUENCE}, sql::{delete_prompt, get_current_week, get_prompt, get_submissions, get_week_info, rollover_week}, Res};
+use crate::{err, file::{delete_submission, generate_challenge_image, initialise_submissions_directory}, info, server_data::{format_ambi_announcement_spiel, format_glyph_announcement_spiel, format_poll_spiel, EMPTY_MESSAGE, SERVER_ID, STATUS_UPDATE_CHANNEL_ID, VOTING_EMOJI_SEQUENCE}, sql::{delete_prompt, deregister_submission, get_current_week, get_prompt_data, get_submissions, get_week_info, rollover_week}, Res};
 use crate::types::{Challenge, ChallengeImageOptions::*};
 
 pub async fn schedule_loop(ctx: &Context) -> Res {
@@ -11,19 +11,22 @@ pub async fn schedule_loop(ctx: &Context) -> Res {
         let current_week = get_current_week(challenge).await?;
         let target_end_time = get_week_info(current_week, challenge).await?.target_end_time;
         let current_time = Utc::now();
-        if current_time > target_end_time {
-            if let Ok(next_prompt) = get_prompt(challenge, 1).await {
+        if current_time > target_end_time.0 {
+            if let Ok(next_prompt) = get_prompt_data(challenge, 1).await {
                 //we're good to change over
-                let next_prompt = next_prompt.1;
+                let next_prompt = next_prompt;
                 let current_week_info = get_week_info(current_week, challenge).await?;
                 info!("Rolling over week. New prompt: {:?}", next_prompt);
                 // details for the incoming week
                 let target_start_time = target_end_time;
                 let target_end_time = target_start_time + challenge.default_duration() 
                     * next_prompt.custom_duration.unwrap_or(1) as i32;
-                let target_timestamp = target_end_time.timestamp();
+                let target_timestamp = target_end_time.0.timestamp();
                 let full_discord_timestamp = format!("<t:{}:F>", target_timestamp);
                 let relative_discord_timestamp = format!("<t:{}:R>", target_timestamp);
+
+                // really, the time that we ought to do this is whenever we lock voting
+                remove_absent_user_submissions(ctx, challenge, current_week, SERVER_ID).await?;
 
                 // get all the files
                 // it's pretty important that we do this before posting anything, since otherwise we could
@@ -69,6 +72,8 @@ pub async fn schedule_loop(ctx: &Context) -> Res {
                     first_numsubs = 25;
                 }
 
+                info!("There are {} + {} submissions for challenge {}.", first_numsubs, second_numsubs, challenge.short_name());
+
                 let prefix = format!("{}{:04}", challenge.one_char_name(), current_week);
                 for (idx, emoji) in VOTING_EMOJI_SEQUENCE.iter().enumerate().take(first_numsubs) {
                     poll_message_builder = poll_message_builder
@@ -90,7 +95,7 @@ pub async fn schedule_loop(ctx: &Context) -> Res {
                 }
 
                 info!("Rolling over database...");
-                rollover_week(challenge, current_week, &next_prompt, Utc::now(), target_start_time, 
+                rollover_week(challenge, current_week, &next_prompt, Utc::now().into(), target_start_time, 
                     target_end_time, (first_numsubs + second_numsubs) as i64, poll_message.id, second_poll_message_id).await?;
                 
                 info!("Removing prompt from the database...");
@@ -104,6 +109,18 @@ pub async fn schedule_loop(ctx: &Context) -> Res {
             else {
                 info!("It's time to rollover {} challenge, but there's no prompt to use.", challenge.short_name());
             }
+        }
+    }
+    Ok(())
+}
+
+/// Remove all of the submissions from users who are not in the guild anymore (banned/left).
+pub async fn remove_absent_user_submissions(ctx: &Context, challenge: Challenge, week_num: i64, guild_id: GuildId) -> Res {
+    for (user_id, message) in get_submissions(challenge, week_num).await?.into_iter() {
+        if let Err(_) = guild_id.member(&ctx, user_id).await {
+            info!("Deregistering submission {} because user {} is no longer present.", message, user_id);
+            deregister_submission(message, challenge, week_num).await?;
+            delete_submission(message, challenge, week_num).await?;
         }
     }
     Ok(())

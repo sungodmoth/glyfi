@@ -1,15 +1,60 @@
-use std::{char, collections::HashMap, str::FromStr, sync::Arc};
+use std::{char, collections::HashMap, ops::{Add, AddAssign}, str::FromStr, sync::Arc};
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, TimeDelta, Utc};
 use poise::serenity_prelude::{prelude::TypeMapKey, ChannelId, Emoji, EmojiId, MessageId, ReactionType, UserId};
-use sqlx::prelude::FromRow;
+use sqlx::{prelude::FromRow, sqlite::SqliteRow};
 use tokio::sync::RwLock;
 
-use crate::{server_data::{AMBIGRAM_ANNOUNCEMENTS_CHANNEL_ID, AMBI_INTERVAL, GLYPH_ANNOUNCEMENTS_CHANNEL_ID, GLYPH_INTERVAL}, Error};
+use crate::{server_data::{AMBIGRAM_ANNOUNCEMENTS_CHANNEL_ID, AMBI_INTERVAL, GLYPH_ANNOUNCEMENTS_CHANNEL_ID, GLYPH_INTERVAL}, Error, ResT};
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct MsgId(pub Option<MessageId>);
+
+impl From<Option<MessageId>> for MsgId {
+    fn from(value: Option<MessageId>) -> Self {
+        Self(value)
+    }
+}
+impl TryFrom<i64> for MsgId {
+    type Error = ();
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        Ok(Some(value as u64).filter(|x| *x != 0).map(|x| x.into()).into())
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Timestamp(pub DateTime<Utc>);
+
+impl From<DateTime<Utc>> for Timestamp {
+    fn from(value: DateTime<Utc>) -> Self {
+        Self(value)
+    }
+}
+
+impl Add<TimeDelta> for Timestamp {
+    type Output = Timestamp;
+    fn add(self, rhs: TimeDelta) -> Self::Output {
+        (self.0 + rhs).into()
+    }
+}
+
+impl AddAssign<TimeDelta> for Timestamp {
+    fn add_assign(&mut self, rhs: TimeDelta) {
+        *self = *self + rhs;
+    }
+}
+
+impl TryFrom<i64> for Timestamp {
+    type Error = Error;
+    fn try_from(value: i64) -> ResT<Self> {
+        DateTime::<Utc>::from_timestamp(value, 0).ok_or("Error parsing unix timestamp.".into()).map(|x| x.into())
+    }
+}
 
 /// Data associated with a given glyph/ambi prompt
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, FromRow)]
 pub struct PromptData {
+    #[sqlx(try_from="i8")]
     pub challenge: Challenge,
     pub prompt: String,
     pub size_percentage: Option<u16>,
@@ -83,12 +128,13 @@ impl FromStr for Challenge {
     }
 }
 
-impl From<i64> for Challenge {
-    fn from(i: i64) -> Self {
+impl TryFrom<i8> for Challenge {
+    type Error = ();
+    fn try_from(i: i8) -> Result<Self, Self::Error> {
         match i {
-            0 => Challenge::Glyph,
-            1 => Challenge::Ambigram,
-            _ => panic!("Invalid challenge ID {}", i),
+            0 => Ok(Challenge::Glyph),
+            1 => Ok(Challenge::Ambigram),
+            _ => Err(()),
         }
     }
 }
@@ -141,23 +187,27 @@ pub struct UserProfileData {
     pub ambigrams_submissions: i64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, FromRow)]
 pub struct WeekInfo {
+    #[sqlx(try_from="i8")]
     pub challenge: Challenge,
     pub week: i64,
     pub prompt: String,
     pub size_percentage: u16,
-    pub target_start_time: DateTime<Utc>,
-    pub target_end_time: DateTime<Utc>,
-    pub actual_start_time: DateTime<Utc>,
-    pub actual_end_time: DateTime<Utc>,
+    #[sqlx(try_from="i64")]
+    pub target_start_time: Timestamp,
+    #[sqlx(try_from="i64")]
+    pub target_end_time: Timestamp,
+    #[sqlx(try_from="i64")]
+    pub actual_start_time: Timestamp,
+    #[sqlx(try_from="i64")]
+    pub actual_end_time: Timestamp,
     pub is_special: bool,
     pub num_subs: i64,
-    // there's not a significantly better way to handle this on the database side...
-    // if we want to be able to support more than 40 submissions, we'll just have
-    // to add a third column
-    pub poll_message_id: Option<MessageId>,
-    pub second_poll_message_id: Option<MessageId>
+    #[sqlx(try_from="i64")]
+    pub poll_message_id: MsgId,
+    #[sqlx(try_from="i64")]
+    pub second_poll_message_id: MsgId,
 }
 
 #[derive(Clone, Debug)]

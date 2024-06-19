@@ -5,7 +5,7 @@ use poise::serenity_prelude::{CreateAttachment, CreateEmbed, CreateEmbedAuthor};
 use tokio::time;
 use crate::{info, sql, Context, Res, ResT};
 use crate::core::{create_embed, file_mtime, handle_command_error};
-use crate::sql::{add_prompt, edit_prompt, forecast_prompt_details, get_current_week, get_prompt, get_week_info, swap_prompts};
+use crate::sql::{add_prompt, edit_prompt, forecast_prompt_details, get_current_week, get_prompt_data, get_prompt_id, get_prompt_id_data, get_week_info, swap_prompts};
 use crate::types::{Challenge, ChallengeImageOptions::*, PreviewableImages, PromptData, UploadableImages};
 use crate::file::generate_challenge_image;
 
@@ -167,7 +167,7 @@ pub async fn queue_edit(
     #[description = "Whether or not the week should be special"] is_special: Option<bool>,
     #[description = "Any extra text to accompany the announcement of this glyph"] extra_announcement_text: Option<String>
 ) -> Res {
-    let (id, mut prompt_data) = get_prompt(challenge, position).await?;
+    let (id, mut prompt_data) = get_prompt_id_data(challenge, position).await?;
     // whether or not this operation necessitates showing the user the new image because it has changed
     let mut changed = false;
     if let Some(v) = size_percentage { if v == 0 { return Err("Cannot set size_percentage to 0.".into()) } else {
@@ -276,7 +276,7 @@ pub async fn queue_list(
     let mut embed = create_embed(&ctx)
         .author(CreateEmbedAuthor::new(format!("Queue for {} Challenge", challenge.name())))
         .description("Listed properties: size_percentage, custom_duration, is_special, extra_announcement_text.\nIf a property has its default value, it is not listed.");
-    for prompt in queue.into_iter().map(|(_, p)| p).enumerate() {
+    for prompt in queue.into_iter().enumerate() {
         embed = embed.field(format!("**{}**: {}", prompt.0 + 1, prompt.1.prompt),[
             prompt.1.size_percentage.map(|x| format!("> size_percentage: {x}%")),
             prompt.1.custom_duration.map(|x| format!("> custom_duration: {x} weeks")),
@@ -316,8 +316,8 @@ pub async fn queue_preview(
     let (week_num, start_time, end_time) = forecast_prompt_details(challenge, position as i64).await?;
 
     ctx.defer_ephemeral().await?;
-    let prompt_data = sql::get_prompt(challenge, position).await?;
-    let path = generate_challenge_image(challenge, week_num, Announcement { prompt: prompt_data.1.prompt, size_percentage: prompt_data.1.size_percentage.unwrap_or(100) },
+    let prompt_data = sql::get_prompt_data(challenge, position).await?;
+    let path = generate_challenge_image(challenge, week_num, Announcement { prompt: prompt_data.prompt, size_percentage: prompt_data.size_percentage.unwrap_or(100) },
         start_time, end_time, false).await?;
 
     ctx.send(CreateReply::default()
@@ -347,7 +347,7 @@ pub async fn image_preview(ctx: Context<'_>,
     ctx.defer_ephemeral().await?;
     let path = match image_type {
         PreviewableImages::Announcement => { 
-            let next_prompt_data = get_prompt(challenge, 1).await?.1;
+            let next_prompt_data = get_prompt_data(challenge, 1).await?;
             let (week_num, start_time, end_time) = forecast_prompt_details(challenge, 1).await?;
             generate_challenge_image(challenge, week_num, 
                 Announcement { prompt: next_prompt_data.prompt , size_percentage: next_prompt_data.size_percentage.unwrap_or(100) }, 

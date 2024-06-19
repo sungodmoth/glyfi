@@ -5,7 +5,7 @@ use tokio::{
     io::AsyncWriteExt,
 };
 
-use crate::{info, types::ChallengeImageOptions, Res, ResT};
+use crate::{info, types::{ChallengeImageOptions, Timestamp}, Res, ResT};
 use crate::types::Challenge;
 
 /// Download a submission's image file to the file system
@@ -99,7 +99,7 @@ pub async fn convert_image_type(prefix: &str, current_ext: &str, desired_ext: &s
 /// Generates a specified challenge image, returning a path to either the image file
 /// or the raw pdf file if that is requested.
 pub async fn generate_challenge_image(challenge: Challenge, week_num: i64, options: ChallengeImageOptions,
-        start_time: DateTime<Utc>, end_time: DateTime<Utc>, raw: bool) -> ResT<String> {
+        start_time: Timestamp, end_time: Timestamp, raw: bool) -> ResT<String> {
     
     let name = format!("{}_{}", challenge.long_name(), options.suffix());
     let mut command = tokio::process::Command::new("./generate.py");
@@ -107,9 +107,9 @@ pub async fn generate_challenge_image(challenge: Challenge, week_num: i64, optio
     command.arg("--week");
     command.arg(week_num.to_string());
     command.arg("--start_date");
-    command.arg(format!("{}",start_time.format("%d/%m/%Y")));
+    command.arg(format!("{}",start_time.0.format("%d/%m/%Y")));
     command.arg("--end_date");
-    command.arg(format!("{}",end_time.format("%d/%m/%Y")));
+    command.arg(format!("{}",end_time.0.format("%d/%m/%Y")));
     command.arg(&name);
     match options {
         ChallengeImageOptions::Announcement { prompt, size_percentage } => {

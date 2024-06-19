@@ -1,5 +1,5 @@
 use crate::server_data::{AMBI_INTERVAL, GLYPH_INTERVAL};
-use crate::types::{Challenge, PromptData, UserProfileData, WeekInfo};
+use crate::types::{Challenge, PromptData, Timestamp, UserProfileData, WeekInfo};
 use crate::{info, info_sync, Error, Res, ResT};
 use chrono::{DateTime, Duration, Utc};
 use const_format::formatcp;
@@ -253,6 +253,17 @@ pub async fn deregister_submission(message: MessageId, challenge: Challenge, wee
     .map_err(|e| e.into())
 }
 
+/// Get all the submissions from a particular week and challenge, along with the users who posted them.
+pub async fn get_submissions(challenge: Challenge, week_num: i64) -> ResT<Vec<(UserId, MessageId)>> {
+    sqlx::query_as("SELECT author, message FROM submissions WHERE challenge = ? AND week = ? ORDER BY message ASC")
+        .bind(challenge.raw() as i16)
+        .bind(week_num)
+        .fetch_all(pool())
+        .await
+        .map_err(|e| e.into())
+        .map(|x| x.into_iter().map(|(a,b): (i64, i64)| (UserId::new(a as u64), MessageId::new(b as u64))).collect())
+}
+
 /// Get the current week.
 pub async fn get_current_week(challenge: Challenge) -> ResT<i64> {
     sqlx::query_scalar("SELECT week FROM current_week WHERE challenge = ? LIMIT 1;")
@@ -381,8 +392,8 @@ pub async fn add_prompt(prompt_data: &PromptData) -> ResT<i64> {
 
 /// Swaps two prompts within a given queue. Returns whether the operation was successful
 pub async fn swap_prompts(challenge: Challenge, pos1: usize, pos2: usize) -> ResT<bool> {
-    let (id1, prompt_data1) = get_prompt(challenge, pos1).await?;
-    let (id2, prompt_data2) = get_prompt(challenge, pos2).await?;
+    let (id1, prompt_data1) = get_prompt_id_data(challenge, pos1).await?;
+    let (id2, prompt_data2) = get_prompt_id_data(challenge, pos2).await?;
     Ok(edit_prompt(id1, &prompt_data2).await? & edit_prompt(id2, &prompt_data1).await?)
 }
 
@@ -415,56 +426,53 @@ pub async fn edit_prompt(id: i64, prompt_data: &PromptData) -> ResT<bool> {
 
 /// Get the id in the db table of the nth prompt in a given queue.
 pub async fn get_prompt_id(challenge: Challenge, position: usize) -> ResT<i64> {
-    let prompts = get_prompts(challenge).await?;
-    let name = poise::ChoiceParameter::name(&challenge);
-    Ok(prompts
-        .get(position.checked_sub(1).ok_or("There is no 0th prompt.")?)
-        .ok_or(format!("There is no {position}th prompt in queue {name}."))?
-        .0)
+    if position < 1 { return Err("Invalid position value.".into()); }
+    sqlx::query_as("SELECT rowid FROM prompts WHERE challenge = ? ORDER BY rowid ASC LIMIT ?")
+        .bind(challenge.raw())
+        .bind(position as i64)
+        .fetch_all(pool())
+        .await
+        .map(|x: Vec<(i64,)>| x.into_iter().skip(position - 1).
+                last().ok_or("No prompt found at given position.".into()))?
+        .map(|x| x.0)
 }
 
-/// Get the id and data of the nth prompt in a given queue
-pub async fn get_prompt(challenge: Challenge, position: usize) -> ResT<(i64, PromptData)> {
+/// Get the data of the nth prompt in a given queue
+pub async fn get_prompt_data(challenge: Challenge, position: usize) -> ResT<PromptData> {
     get_prompts(challenge).await?.get(position.checked_sub(1).ok_or::<Error>("0 is not a valid prompt position.".into())?)
     .cloned().ok_or(format!("There is no prompt at position {position} in challenge {}.", challenge.name()).into())
 }
 
+/// Get the id and data of the nth prompt in a given queue
+pub async fn get_prompt_id_data(challenge: Challenge, position: usize) -> ResT<(i64,PromptData)> {
+    Ok((get_prompt_id(challenge, position).await?, get_prompt_data(challenge, position).await?))
+}
+
 /// Get all prompts for a challenge, together with their ids in the db table.
-pub async fn get_prompts(challenge: Challenge) -> ResT<Vec<(i64, PromptData)>> {
-    sqlx::query_as("SELECT rowid, prompt, size_percentage, custom_duration, is_special, extra_announcement_text FROM prompts WHERE challenge = ? ORDER BY rowid ASC")
+pub async fn get_prompts(challenge: Challenge) -> ResT<Vec<PromptData>> {
+    sqlx::query_as("SELECT * FROM prompts WHERE challenge = ? ORDER BY rowid ASC")
         .bind(challenge.raw())
         .fetch_all(pool())
         .await
         .map_err(|e| e.into())
-        .map(|x| x.into_iter()
-            .map(|(a, b, c, d, e, f): (i64, String, Option<u16>, Option<u16>, Option<bool>, Option<String>)| 
-            (a, PromptData {challenge: challenge, prompt: b, size_percentage: c, custom_duration: d,
-                is_special: e, extra_announcement_text: f }))
-            .collect())
 }
 
 /// Get stats for a week.
 pub async fn get_week_info(week_num: i64, challenge: Challenge) -> ResT<WeekInfo> {
     sqlx::query_as(
-        r#"SELECT week, challenge, prompt, size_percentage, target_start_time, target_end_time, actual_start_time, actual_end_time, is_special, num_subs, poll_message_id, second_poll_message_id FROM weeks WHERE week = ? AND challenge = ? LIMIT 1; "#)
+        r#"SELECT * FROM weeks WHERE week = ? AND challenge = ? LIMIT 1; "#)
         .bind(week_num)
         .bind(challenge.raw() as i64)
         .fetch_optional(pool())
         .await
         .map_err(|e| e.to_string())
-        .map(|x| { 
-            x.map(|y: (i64, i64, String, u16, i64, i64, i64, i64, bool, i64, Option<i64>, Option<i64>)|
-             WeekInfo { week: y.0, challenge: y.1.into(), prompt: y.2, size_percentage: y.3, 
-                target_start_time: DateTime::<Utc>::from_timestamp(y.4, 0).unwrap(), target_end_time: DateTime::<Utc>::from_timestamp(y.5, 0).unwrap(),
-                actual_start_time: DateTime::<Utc>::from_timestamp(y.6, 0).unwrap(), actual_end_time: DateTime::<Utc>::from_timestamp(y.7, 0).unwrap(),
-                 is_special: y.8, num_subs: y.9, poll_message_id: y.10.map(|x| MessageId::new(x as u64)), second_poll_message_id: y.11.map(|x| MessageId::new(x as u64))}) 
-        })
         .map(|x| x.ok_or(format!("There is no week {week_num} for challenge {challenge:?} in the database.").into()))?
 }
 
 /// Inserts a week into the db or modifies it if it's already there.
 pub async fn insert_or_modify_week(week_info: WeekInfo) -> Res {
-    // please. just don't look at this spaghetti code. i'll do anything
+    // there must be a better way to do this
+    // like surely
     sqlx::query(r#"
     INSERT INTO weeks (week, challenge, prompt, size_percentage, target_start_time, target_end_time, actual_start_time, actual_end_time, is_special, num_subs, poll_message_id, second_poll_message_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
     ON CONFLICT (week, challenge) DO UPDATE SET (prompt, size_percentage, target_start_time, target_end_time, actual_start_time, actual_end_time, is_special, num_subs, poll_message_id, second_poll_message_id) = (?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12);
@@ -473,29 +481,18 @@ pub async fn insert_or_modify_week(week_info: WeekInfo) -> Res {
         .bind(week_info.challenge.raw() as i64)
         .bind(week_info.prompt)
         .bind(week_info.size_percentage)
-        .bind(week_info.target_start_time.timestamp())
-        .bind(week_info.target_end_time.timestamp())
-        .bind(week_info.actual_start_time.timestamp())
-        .bind(week_info.actual_end_time.timestamp())
+        .bind(week_info.target_start_time.0.timestamp())
+        .bind(week_info.target_end_time.0.timestamp())
+        .bind(week_info.actual_start_time.0.timestamp())
+        .bind(week_info.actual_end_time.0.timestamp())
         .bind(week_info.is_special)
         .bind(week_info.num_subs)
-        .bind(week_info.poll_message_id.map(|x| x.get() as i64))
-        .bind(week_info.second_poll_message_id.map(|x| x.get() as i64))
+        .bind(week_info.poll_message_id.0.map(|x| x.get() as i64))
+        .bind(week_info.second_poll_message_id.0.map(|x| x.get() as i64))
         .execute(pool())
         .await
         .map(|_| ())
         .map_err(|e| e.into())
-}
-
-/// Get all the submissions from a particular week and challenge, along with the users who posted them.
-pub async fn get_submissions(challenge: Challenge, week_num: i64) -> ResT<Vec<(UserId, MessageId)>> {
-    sqlx::query_as("SELECT author, message FROM submissions WHERE challenge = ? AND week = ? ORDER BY message ASC")
-        .bind(week_num)
-        .bind(challenge.raw() as i16)
-        .fetch_all(pool())
-        .await
-        .map_err(|e| e.into())
-        .map(|x| x.into_iter().map(|(a,b): (i64, i64)| (UserId::new(a as u64), MessageId::new(b as u64))).collect())
 }
 
 /// Updates the `votes` table with one user's vote. Returns whether the operation was successful.
@@ -536,14 +533,14 @@ pub async fn get_votes(challenge: Challenge, week_num: i64, user_id: UserId, num
 }
 
 /// Do the necessary database operations to roll over to next week.
-pub async fn rollover_week(challenge: Challenge, current_week: i64, next_prompt: &PromptData, current_time: DateTime<Utc>, target_start_time: DateTime<Utc>, target_end_time: DateTime<Utc>, num_subs: i64, poll_message_id: MessageId, second_poll_message_id: Option<MessageId>) -> Res {
+pub async fn rollover_week(challenge: Challenge, current_week: i64, next_prompt: &PromptData, current_time: Timestamp, target_start_time: Timestamp, target_end_time: Timestamp, num_subs: i64, poll_message_id: MessageId, second_poll_message_id: Option<MessageId>) -> Res {
     let mut current_week_info = get_week_info(current_week, challenge).await?;
     current_week_info.actual_end_time = current_time;
     current_week_info.num_subs = num_subs;
-    current_week_info.poll_message_id = Some(poll_message_id);
-    current_week_info.second_poll_message_id = second_poll_message_id;
+    current_week_info.poll_message_id = Some(poll_message_id).into();
+    current_week_info.second_poll_message_id = second_poll_message_id.into();
     let next_week_info = WeekInfo { challenge, week: current_week + 1, prompt: next_prompt.prompt.clone(), size_percentage: next_prompt.size_percentage.unwrap_or(100),
-        target_start_time,  target_end_time, actual_start_time: current_time, actual_end_time: DateTime::<Utc>::UNIX_EPOCH, is_special: next_prompt.is_special.unwrap_or(false), num_subs: 0, poll_message_id: None, second_poll_message_id: None};
+        target_start_time,  target_end_time, actual_start_time: current_time, actual_end_time: DateTime::<Utc>::UNIX_EPOCH.into(), is_special: next_prompt.is_special.unwrap_or(false), num_subs: 0, poll_message_id: None.into(), second_poll_message_id: None.into()};
     insert_or_modify_week(current_week_info).await?;
     insert_or_modify_week(next_week_info).await?;
     set_current_week(challenge, current_week + 1).await?;
@@ -552,7 +549,7 @@ pub async fn rollover_week(challenge: Challenge, current_week: i64, next_prompt:
 
 /// For a prompt in any queue, forecast based on current parameters when that prompt will be used and
 /// what the week number will be. Allows for accurate image preview. Takes negative index.
-pub async fn forecast_prompt_details(challenge: Challenge, mut position: i64) -> ResT<(i64, DateTime<Utc>, DateTime<Utc>)> {
+pub async fn forecast_prompt_details(challenge: Challenge, mut position: i64) -> ResT<(i64, Timestamp, Timestamp)> {
     let queue = get_prompts(challenge).await?;
     info!("{:?}", queue);
     if position < 0 {
@@ -564,8 +561,8 @@ pub async fn forecast_prompt_details(challenge: Challenge, mut position: i64) ->
     let current_week_info = get_week_info(week, challenge).await?;
     let mut start_time = current_week_info.target_end_time;
     for pos in 1..position {
-        start_time += challenge.default_duration() * queue[(pos as usize) - 1].1.custom_duration.unwrap_or(1) as i32;
+        start_time += challenge.default_duration() * queue[(pos as usize) - 1].custom_duration.unwrap_or(1) as i32;
     }
-    let end_time = start_time + challenge.default_duration() * (prompt.1.custom_duration.unwrap_or(1) as i32);
+    let end_time = start_time + challenge.default_duration() * (prompt.custom_duration.unwrap_or(1) as i32);
     Ok((week + position, start_time, end_time))
 }
