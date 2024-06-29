@@ -1,4 +1,4 @@
-use std::{char, collections::HashMap, ops::{Add, AddAssign}, str::FromStr, sync::Arc};
+use std::{char, collections::HashMap, ops::{Add, AddAssign, Sub}, str::FromStr, sync::Arc};
 
 use chrono::{DateTime, Duration, TimeDelta, Utc};
 use poise::serenity_prelude::{prelude::TypeMapKey, ChannelId, Emoji, EmojiId, MessageId, ReactionType, UserId};
@@ -6,6 +6,7 @@ use sqlx::{prelude::FromRow, sqlite::SqliteRow};
 use tokio::sync::RwLock;
 
 use crate::{server_data::{AMBIGRAM_ANNOUNCEMENTS_CHANNEL_ID, AMBI_INTERVAL, GLYPH_ANNOUNCEMENTS_CHANNEL_ID, GLYPH_INTERVAL}, Error, ResT};
+
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MsgId(pub Option<MessageId>);
@@ -22,11 +23,16 @@ impl TryFrom<i64> for MsgId {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Timestamp(pub DateTime<Utc>);
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
+pub struct Timestamp(pub Option<DateTime<Utc>>);
 
 impl From<DateTime<Utc>> for Timestamp {
     fn from(value: DateTime<Utc>) -> Self {
+        Self(Some(value))
+    }
+}
+impl From<Option<DateTime<Utc>>> for Timestamp {
+    fn from(value: Option<DateTime<Utc>>) -> Self {
         Self(value)
     }
 }
@@ -34,7 +40,7 @@ impl From<DateTime<Utc>> for Timestamp {
 impl Add<TimeDelta> for Timestamp {
     type Output = Timestamp;
     fn add(self, rhs: TimeDelta) -> Self::Output {
-        (self.0 + rhs).into()
+        (self.0.map(|x| x + rhs)).into()
     }
 }
 
@@ -44,19 +50,37 @@ impl AddAssign<TimeDelta> for Timestamp {
     }
 }
 
+impl Sub<TimeDelta> for Timestamp {
+    type Output = Timestamp;
+    fn sub(self, rhs: TimeDelta) -> Self::Output {
+        (self.0.map(|x| x - rhs)).into()
+    }
+}
+
 impl TryFrom<i64> for Timestamp {
     type Error = Error;
     fn try_from(value: i64) -> ResT<Self> {
         DateTime::<Utc>::from_timestamp(value, 0).ok_or("Error parsing unix timestamp.".into()).map(|x| x.into())
     }
 }
+impl TryFrom<Option<i64>> for Timestamp {
+    type Error = Error;
+    fn try_from(value: Option<i64>) -> ResT<Self> {
+        Ok(match value {
+            Some(t) => t.try_into()?,
+            None => Timestamp(None)
+        })
+    }
+}
+
+pub const NULL_TIMESTAMP: Timestamp = Timestamp(None);
 
 /// Data associated with a given glyph/ambi prompt
 #[derive(Clone, Debug, PartialEq, FromRow)]
 pub struct PromptData {
     #[sqlx(try_from="i8")]
     pub challenge: Challenge,
-    pub prompt: String,
+    pub prompt_string: String,
     pub size_percentage: Option<u16>,
     pub custom_duration: Option<u16>,
     pub is_special: Option<bool>,
@@ -191,16 +215,16 @@ pub struct UserProfileData {
 pub struct WeekInfo {
     #[sqlx(try_from="i8")]
     pub challenge: Challenge,
-    pub week: i64,
-    pub prompt: String,
+    pub week_num: i64,
+    pub prompt_string: String,
     pub size_percentage: u16,
     #[sqlx(try_from="i64")]
     pub target_start_time: Timestamp,
     #[sqlx(try_from="i64")]
     pub target_end_time: Timestamp,
-    #[sqlx(try_from="i64")]
+    #[sqlx(try_from="Option<i64>")]
     pub actual_start_time: Timestamp,
-    #[sqlx(try_from="i64")]
+    #[sqlx(try_from="Option<i64>")]
     pub actual_end_time: Timestamp,
     pub is_special: bool,
     pub num_subs: i64,
@@ -230,8 +254,8 @@ impl WinnerPosition {
 
 #[derive(Clone, Debug)]
 pub enum ChallengeImageOptions {
-    Announcement{prompt: String, size_percentage: u16},
-    Poll{prompt: String, size_percentage: u16},
+    Announcement{prompt_string: String, size_percentage: u16},
+    Poll{prompt_string: String, size_percentage: u16},
     Winner{position: WinnerPosition, winner_nick: String, winner_id: UserId, submission_id: MessageId},
 }
 

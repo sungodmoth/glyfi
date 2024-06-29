@@ -19,6 +19,8 @@ use clap::Parser;
 use commands::image;
 use poise::serenity_prelude::futures::TryFutureExt;
 use poise::serenity_prelude as ser;
+use server_data::TIME_GAP;
+use types::NULL_TIMESTAMP;
 use std::sync::Arc;
 use tokio::try_join;
 
@@ -131,14 +133,15 @@ async fn main() {
     //dummy testing code, set up some initial state
     {
         use types::{Challenge, WeekInfo};
-        use sql::{insert_or_modify_week, set_current_week};
+        use sql::{insert_or_modify_week, set_current_week_num};
         use chrono::{DateTime, Utc};
         for challenge in [Challenge::Glyph, Challenge::Ambigram].into_iter() {
             let current_time = Utc::now();
-            insert_or_modify_week(WeekInfo { challenge, week: 0, prompt: "A".to_owned(), size_percentage: 100, target_start_time: current_time.into(),
-                target_end_time: (current_time + challenge.default_duration()).into(), actual_start_time: current_time.into(), 
-                actual_end_time: (current_time + challenge.default_duration()).into(), is_special: false, num_subs: 0, poll_message_id: None.into(), second_poll_message_id: None.into() }).await;
-            set_current_week(challenge, 0).await;
+            insert_or_modify_week(WeekInfo { challenge, week_num: 0, prompt_string: "A".to_owned(), size_percentage: 100, target_start_time: current_time.into(),
+                target_end_time: (current_time + challenge.default_duration() - TIME_GAP).into(), actual_start_time: current_time.into(), 
+                actual_end_time: NULL_TIMESTAMP, is_special: false, num_subs: 0, poll_message_id: None.into(), second_poll_message_id: None.into() })
+                .await.map_err(|e| println!("Error initialising dummy challenge: {}", e));
+            set_current_week_num(challenge, 0).await;
         }
     }
     let mut client =

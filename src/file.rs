@@ -107,18 +107,18 @@ pub async fn generate_challenge_image(challenge: Challenge, week_num: i64, optio
     command.arg("--week");
     command.arg(week_num.to_string());
     command.arg("--start_date");
-    command.arg(format!("{}",start_time.0.format("%d/%m/%Y")));
+    command.arg(format!("{}",start_time.0.unwrap().format("%d/%m/%Y")));
     command.arg("--end_date");
-    command.arg(format!("{}",end_time.0.format("%d/%m/%Y")));
+    command.arg(format!("{}",end_time.0.unwrap().format("%d/%m/%Y")));
     command.arg(&name);
     match options {
-        ChallengeImageOptions::Announcement { prompt, size_percentage } => {
-            command.arg(&prompt);
+        ChallengeImageOptions::Announcement { prompt_string, size_percentage } => {
+            command.arg(&prompt_string);
             command.arg("--size_percentage");
             command.arg(size_percentage.to_string());
         }
-        ChallengeImageOptions::Poll { prompt, size_percentage} => {
-            command.arg(&prompt);
+        ChallengeImageOptions::Poll { prompt_string, size_percentage} => {
+            command.arg(&prompt_string);
             command.arg("--size_percentage");
             command.arg(size_percentage.to_string());
         }

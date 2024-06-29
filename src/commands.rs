@@ -5,7 +5,7 @@ use poise::serenity_prelude::{CreateAttachment, CreateEmbed, CreateEmbedAuthor};
 use tokio::time;
 use crate::{info, sql, Context, Res, ResT};
 use crate::core::{create_embed, file_mtime, handle_command_error};
-use crate::sql::{add_prompt, edit_prompt, forecast_prompt_details, get_current_week, get_prompt_data, get_prompt_id, get_prompt_id_data, get_week_info, swap_prompts};
+use crate::sql::{add_prompt, edit_prompt, forecast_prompt_details, get_current_week_num, get_prompt_data, get_prompt_id, get_prompt_id_data, get_week_info, swap_prompts};
 use crate::types::{Challenge, ChallengeImageOptions::*, PreviewableImages, PromptData, UploadableImages};
 use crate::file::generate_challenge_image;
 
@@ -118,7 +118,7 @@ pub async fn queue(_ctx: Context<'_>) -> Res { unreachable!(); }
 pub async fn queue_add(
     ctx: Context<'_>,
     #[description = "Which challenge to set the prompt for"] challenge: Challenge,
-    #[description = "The prompt for the challenge"] prompt: String,
+    #[description = "The prompt for the challenge"] prompt_string: String,
     #[description = "Percentage modifying the size of the prompt - defaults to 100 (normal size)"] size_percentage: Option<u16>,
     #[description = "Duration of the challenge measured in weeks - defaults to 1"] custom_duration: Option<u16>,
     #[description = "Whether the week is special - defaults to false"] is_special: Option<bool>,
@@ -126,7 +126,7 @@ pub async fn queue_add(
 ) -> Res {
     if let Some(0) = size_percentage { return Err("Cannot set size_percentage to 0.".into()); }
     if let Some(0) = custom_duration { return Err("Cannot set custom_duration to 0.".into()); }
-    let prompt_data = PromptData { challenge, prompt, size_percentage: size_percentage.filter(|x| x != &100), 
+    let prompt_data = PromptData { challenge, prompt_string, size_percentage: size_percentage.filter(|x| x != &100), 
         custom_duration, is_special: is_special.filter(|x| x == &true), extra_announcement_text };
 
     // Save prompt.
@@ -142,7 +142,7 @@ pub async fn queue_add(
     
     // Generate image based on new prompt.
     ctx.defer_ephemeral().await?;
-    let path = generate_challenge_image(challenge, week_num, Announcement { prompt: prompt_data.prompt, size_percentage: prompt_data.size_percentage.unwrap_or(100) },
+    let path = generate_challenge_image(challenge, week_num, Announcement { prompt_string: prompt_data.prompt_string, size_percentage: prompt_data.size_percentage.unwrap_or(100) },
         start_time, end_time, false).await?;
 
     // Get mtime. This is just a little sanity check.
@@ -196,7 +196,8 @@ pub async fn queue_edit(
         
         // Generate image based on modified prompt.
         ctx.defer_ephemeral().await?;
-        let path = generate_challenge_image(challenge, week_num, Announcement { prompt: prompt_data.prompt, size_percentage: prompt_data.size_percentage.unwrap_or(100) },
+        let path = generate_challenge_image(challenge, week_num, Announcement { prompt_string: prompt_data.prompt_string, 
+            size_percentage: prompt_data.size_percentage.unwrap_or(100) },
         start_time, end_time, false).await?;
 
         // Get mtime. This is just a little sanity check.
@@ -276,12 +277,12 @@ pub async fn queue_list(
     let mut embed = create_embed(&ctx)
         .author(CreateEmbedAuthor::new(format!("Queue for {} Challenge", challenge.name())))
         .description("Listed properties: size_percentage, custom_duration, is_special, extra_announcement_text.\nIf a property has its default value, it is not listed.");
-    for prompt in queue.into_iter().enumerate() {
-        embed = embed.field(format!("**{}**: {}", prompt.0 + 1, prompt.1.prompt),[
-            prompt.1.size_percentage.map(|x| format!("> size_percentage: {x}%")),
-            prompt.1.custom_duration.map(|x| format!("> custom_duration: {x} weeks")),
-            prompt.1.is_special.map(|x| format!("> is_special: {x}")),
-            prompt.1.extra_announcement_text.map(|x| format!("> extra_announcement_text: {x}"))
+    for (idx, prompt) in queue.into_iter().enumerate() {
+        embed = embed.field(format!("**{}**: {}", idx + 1, prompt.prompt_string),[
+            prompt.size_percentage.map(|x| format!("> size_percentage: {x}%")),
+            prompt.custom_duration.map(|x| format!("> custom_duration: {x} weeks")),
+            prompt.is_special.map(|x| format!("> is_special: {x}")),
+            prompt.extra_announcement_text.map(|x| format!("> extra_announcement_text: {x}"))
         ].into_iter().flatten().collect::<Vec<String>>().join("\n"), false);
     }
 
@@ -317,8 +318,8 @@ pub async fn queue_preview(
 
     ctx.defer_ephemeral().await?;
     let prompt_data = sql::get_prompt_data(challenge, position).await?;
-    let path = generate_challenge_image(challenge, week_num, Announcement { prompt: prompt_data.prompt, size_percentage: prompt_data.size_percentage.unwrap_or(100) },
-        start_time, end_time, false).await?;
+    let path = generate_challenge_image(challenge, week_num, Announcement { prompt_string: prompt_data.prompt_string, 
+        size_percentage: prompt_data.size_percentage.unwrap_or(100) }, start_time, end_time, false).await?;
 
     ctx.send(CreateReply::default()
         .attachment(CreateAttachment::path(path).await?)
@@ -350,13 +351,14 @@ pub async fn image_preview(ctx: Context<'_>,
             let next_prompt_data = get_prompt_data(challenge, 1).await?;
             let (week_num, start_time, end_time) = forecast_prompt_details(challenge, 1).await?;
             generate_challenge_image(challenge, week_num, 
-                Announcement { prompt: next_prompt_data.prompt , size_percentage: next_prompt_data.size_percentage.unwrap_or(100) }, 
+                Announcement { prompt_string: next_prompt_data.prompt_string , size_percentage: next_prompt_data.size_percentage.unwrap_or(100) }, 
                 start_time, end_time, raw.unwrap_or(false)).await? },
         PreviewableImages::Poll => {
-            let week_num = get_current_week(challenge).await?;
+            let week_num = get_current_week_num(challenge).await?;
             let week_info = get_week_info(week_num, challenge).await?;
-            generate_challenge_image(challenge, week_num, Poll { prompt: week_info.prompt, size_percentage: week_info.size_percentage }, week_info.target_start_time, 
-                week_info.target_end_time, raw.unwrap_or(false)).await? },
+            generate_challenge_image(challenge, week_num, Poll { prompt_string: week_info.prompt_string, 
+                size_percentage: week_info.size_percentage }, week_info.target_start_time, week_info.target_end_time, 
+                raw.unwrap_or(false)).await? },
         PreviewableImages::FirstPlace => { unimplemented!() },
         PreviewableImages::SecondPlace => { unimplemented!() },
         PreviewableImages::ThirdPlace => {unimplemented!() },
